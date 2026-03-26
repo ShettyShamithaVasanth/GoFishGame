@@ -16,9 +16,7 @@ public class GameSceneUI : MonoBehaviour
     }
 
     public void NextTurn()
-{
-    Debug.Log("Next Turn button clicked");
-
-    gameManager.StartNextTurnFromButton();
-}
+    {
+        Debug.Log("NextTurn button not used in final game");
+    }
 }

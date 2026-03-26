@@ -67,10 +67,12 @@ public class UIPlayer : MonoBehaviour, ICardOwner
         if (isMyTurn)
         {
             StartTurnAnimation();
-            //enable hand card interaction if human
-            //if(ai)
-            //    StartCoroutine(AITurnRoutine());
-            ShowCurrentPlayerPopup();
+
+            // ⭐ ONLY AI should auto show popup
+            if (!player.IsHuman)
+            {
+                ShowCurrentPlayerPopup();
+            }
         }
         else
         {
@@ -82,6 +84,9 @@ public class UIPlayer : MonoBehaviour, ICardOwner
     void ShowCurrentPlayerPopup()
     {
         Debug.Log(playerInstance.PlayerName + " showing popup1");
+
+        if (popup1Text != null)
+            popup1Text.text = "";   // ⭐ CLEAR OLD TEXT
 
         if (popup1 != null)
             popup1.SetActive(true);
@@ -198,7 +203,8 @@ public class UIPlayer : MonoBehaviour, ICardOwner
 
     public void HideTargetPopup()
     {
-        Debug.Log("Hiding TARGET popup for " + playerInstance.PlayerName);
+        Debug.Log("Hiding TARGET popup for ------ ", gameObject);
+        //  Debug.Log("Hiding TARGET popup for " + playerInstance.PlayerName);
         if (popup2 != null)
             popup2.SetActive(false);
     }

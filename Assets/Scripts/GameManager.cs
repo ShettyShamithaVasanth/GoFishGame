@@ -3,13 +3,14 @@ using UnityEngine.Rendering;
 using System.Collections.Generic;
 using DG.Tweening;
 using System.Collections;
-
 public class GameManager : MonoBehaviour, ICardOwner
 {
     [Header("Card Data")]
     public CardData cardData;
     [Header("UI Players")]
     public UIPlayer[] uiPlayers; // Size = 4
+    private AIMemory aiMemory = new AIMemory();
+
 
     [Header("Deck Visual")]
     public Transform deckPosition;      // empty object in center
@@ -18,10 +19,18 @@ public class GameManager : MonoBehaviour, ICardOwner
     private Deck deck;
     private UIPlayer currentTargetUI;
 
-    private int[] turnOrder = { 1, 3, 0, 2 };
-    private int turnIndex = 0;
+    // ⭐ Mode-based player index arrays
+    [SerializeField]
+    UIPlayer[] mode2Players, mode3Players, mode4Players;
+
+    // ⭐ Active players for current game
+    int[] activePlayers;
+
+    // private int[] turnOrder = { 0, 1, 2, 3 };
+    // private int turnIndex = 0;
+    [HideInInspector]
     public Player[] players; // size 4
-    private int currentPlayer = 1;   // Tracks whose turn
+    private int currentPlayer = 0;   // Tracks whose turn
     private int selectedRank = -1;
     // ⭐ remembers the rank that was asked before Go Fish
     private int lastAskedRank = -1;
@@ -29,15 +38,16 @@ public class GameManager : MonoBehaviour, ICardOwner
     private bool waitingForTarget = false;
     private bool waitingForDeckClick = false;
     private bool turnActionRunning = false;
-    private bool waitingForNextTurnButton = false;
+    // private bool waitingForNextTurnButton = false;
 
     // ⭐ tracks asked rank per target in current turn
     private HashSet<string> askedRankTargetThisTurn = new HashSet<string>();
+    private HashSet<int> completedRanks = new HashSet<int>();
 
     public GameOverUI gameOverUI;
     private bool gameOver = false;
     // ⭐ tracks if the last deck card was drawn
-    private bool lastDeckCardDrawn = false;
+    // private bool lastDeckCardDrawn = false;
 
     void Start()
     {
@@ -54,60 +64,98 @@ public class GameManager : MonoBehaviour, ICardOwner
         OnDeckClicked();
     }
 
+    int GetUIIndex(int playerID)
+    {
+        for (int i = 0; i < activePlayers.Length; i++)
+        {
+            if (activePlayers[i] == playerID)
+                return i;
+        }
+
+        Debug.LogError("UI index not found for playerID: " + playerID);
+        return 0;
+    }
     void SetupGame()
     {
+        aiMemory = new AIMemory();
+
         // 1️⃣ Create Deck
         deck = new Deck(this);
         deck.Shuffle();
-        // 2️⃣ Create Players Array
+
+        // 2️⃣ Create ALL 4 players (fixed positions)
         players = new Player[4];
 
+        players[0] = new Player(0, "You", true);        // Bottom
+        players[1] = new Player(1, "AI Left", false);   // Left
+        players[2] = new Player(2, "AI Top", false);    // Top
+        players[3] = new Player(3, "AI Right", false);  // Right
+
+        // 3️⃣ Select mode
         int count = ModeSelectionController.selectedPlayers;
 
-        if (count == 2)
+        switch (count)
         {
-            turnOrder = new int[] { 1, 0 }; // AI Top → Human
+            case 2:
+                uiPlayers = mode2Players;
+                activePlayers = new int[] { 0, 2 };   // ⭐ ADD THIS
+                // turnOrder = new int[] { 0, 2 };
+                break;
+
+            case 3:
+                uiPlayers = mode3Players;
+                activePlayers = new int[] { 0, 1, 3 }; // ⭐ ADD THIS
+                // turnOrder = new int[] { 0, 1, 3 };
+                break;
+
+            default:
+                uiPlayers = mode4Players;
+                activePlayers = new int[] { 0, 1, 2, 3 }; // ⭐ ADD THIS
+                // turnOrder = new int[] { 0, 1, 2, 3 };
+                break;
         }
 
-        else if (count == 3)
-        {
-            turnOrder = new int[] { 2, 0, 3 }; // AI Left → Human → AI Right
-        }
-
-        else
-        {
-            turnOrder = new int[] { 1, 3, 0, 2 }; // original 4 player order
-        }
-        players[0] = new Player(0, "You", true);
-        players[1] = new Player(1, "AI Top", false);
-        players[2] = new Player(2, "AI Left", false);
-        players[3] = new Player(3, "AI Right", false);
-
-
-        // 3️⃣ Deal 7 Cards Each
+        // 4️⃣ Deal 7 cards ONLY to active players
         for (int i = 0; i < 7; i++)
         {
-            for (int j = 0; j < players.Length; j++)
+            foreach (int id in activePlayers)
             {
-                players[j].AddCard(deck.GetCard());
+                players[id].AddCard(deck.GetCard());
             }
         }
-        // 4️⃣ Connect UI
-        for (int i = 0; i < uiPlayers.Length; i++)
+
+        // 5️⃣ Initialize UI ONLY for active players
+        for (int i = 0; i < activePlayers.Length; i++)
         {
-            uiPlayers[i].Initialize(players[i]);
+            int id = activePlayers[i];
+            uiPlayers[i].Initialize(players[id]);
         }
-        // Show hands based on IsHumans
-        for (int i = 0; i < players.Length; i++)
+
+        // 6️⃣ Hide unused UI players
+        // for (int i = 0; i < uiPlayers.Length; i++)
+        // {
+        //     if (!System.Array.Exists(activePlayers, x => x == i))
+        //     {
+        //         uiPlayers[i].gameObject.SetActive(false);
+        //     }
+        // }
+
+        // 7️⃣ Refresh hands
+        for (int i = 0; i < activePlayers.Length; i++)
         {
-            bool showFront = players[i].IsHuman;
+            int id = activePlayers[i];
+            bool showFront = players[id].IsHuman;
             uiPlayers[i].RefreshHand(showFront);
         }
-        // 6️⃣ Show Deck Stack
+
+        // 8️⃣ Deck visual
         CreateDeckVisual();
-        // 7️⃣ Start First Turn
-        currentPlayer = turnOrder[turnIndex];
+
+        // 9️⃣ Start first turn
+        currentPlayer = activePlayers[0];
         StartCurrentTurn();
+
+        // 🔟 Enable interaction
         foreach (UIPlayer ui in uiPlayers)
         {
             ui.canInteract = true;
@@ -167,6 +215,11 @@ public class GameManager : MonoBehaviour, ICardOwner
             ui.HideTargetPopup();
         }
         players[currentPlayer].StartTurn();
+        if (players[currentPlayer].IsHuman)
+        {
+            selectedRank = -1;
+            waitingForTarget = false;
+        }
 
         Debug.Log("Turn: " + players[currentPlayer].PlayerName);
 
@@ -199,31 +252,34 @@ public class GameManager : MonoBehaviour, ICardOwner
         players[currentPlayer].EndTurn();
         askedRankTargetThisTurn.Clear();
         // Move to next in custom order
-        turnIndex++;
+        int currentIndex = System.Array.IndexOf(activePlayers, currentPlayer);
 
-        if (turnIndex >= turnOrder.Length)
-            turnIndex = 0;
+        currentIndex++;
 
-        currentPlayer = turnOrder[turnIndex];
+        if (currentIndex >= activePlayers.Length)
+            currentIndex = 0;
+
+        currentPlayer = activePlayers[currentIndex];
         // Start next
-        waitingForNextTurnButton = true;
-        Debug.Log("Turn ended. Waiting for NextTurn button.");
+        // waitingForNextTurnButton = true;
+        // Debug.Log("Turn ended. Waiting for NextTurn button.");
+        Invoke(nameof(StartCurrentTurn), 0.5f);
     }
 
-    public void StartNextTurnFromButton()
-    {
-        if (!waitingForNextTurnButton)
-        {
-            Debug.Log("NextTurn button pressed but turn not finished yet.");
-            return;
-        }
+    // public void StartNextTurnFromButton()
+    // {
+    //     if (!waitingForNextTurnButton)
+    //     {
+    //         Debug.Log("NextTurn button pressed but turn not finished yet.");
+    //         return;
+    //     }
 
-        waitingForNextTurnButton = false;
+    //     waitingForNextTurnButton = false;
 
-        Debug.Log("NextTurn button confirmed. Starting next turn.");
+    //     Debug.Log("NextTurn button confirmed. Starting next turn.");
 
-        StartCurrentTurn();
-    }
+    //     StartCurrentTurn();
+    // }
     public Player GetCurrentPlayer()
     {
         return players[currentPlayer];
@@ -231,36 +287,84 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     void AISelectRandomTarget()
     {
+
         if (gameOver)
             return;
 
-        // ⭐ stop AI actions if deck empty
         if (deck.CardCount() == 0)
         {
             TriggerGameOver();
             return;
         }
 
-        // ⭐ clear old target popups
         foreach (UIPlayer ui in uiPlayers)
         {
             ui.HideTargetPopup();
         }
+
         if (turnActionRunning)
             return;
+
         Player aiPlayer = players[currentPlayer];
-        // pick random card from AI hand
         List<Card> aiCards = aiPlayer.PlayerHand.Cards;
-        // ⭐ find a valid rank that still exists in hand
-        int attempts = 0;
-        do
+
+        if (aiCards.Count == 0)
         {
-            int randomIndex = Random.Range(0, aiCards.Count);
-            selectedRank = aiCards[randomIndex].Rank;
-            attempts++;
+            Debug.Log("AI has no cards, skipping turn.");
+            EndTurn();
+            return;
         }
-        while (!PlayerHasRankInHand(currentPlayer, selectedRank) && attempts < 10);
-        // ⭐ safety check (AI should not ask rank it doesn't have)
+
+        // ✅ STEP 1 — CREATE possibleTargets FIRST (FIX)
+        List<int> possibleTargets = new List<int>();
+        int count = ModeSelectionController.selectedPlayers;
+
+        for (int i = 0; i < activePlayers.Length; i++)
+        {
+            int id = activePlayers[i];
+
+            if (id != currentPlayer)
+            {
+                possibleTargets.Add(id);
+            }
+        }
+
+        // ✅ STEP 2 — GET SORTED RANKS
+        List<int> sortedRanks = GetSortedRanks(aiCards);
+
+        bool foundValidMove = false;
+
+        foreach (int rank in sortedRanks)
+        {
+            selectedRank = rank;
+
+            if (!PlayerHasRankInHand(currentPlayer, selectedRank))
+                continue;
+
+            int tempTarget = SelectBestTarget(possibleTargets, selectedRank);
+
+            if (!AlreadyAskedThisTurn(tempTarget, selectedRank))
+            {
+                foundValidMove = true;
+                break;
+            }
+        }
+
+        if (!foundValidMove)
+        {
+            Debug.Log("No valid moves left. Ending turn.");
+            EndTurn();
+            return;
+        }
+
+        // ✅ FINAL SAFETY CHECKS (UNCHANGED)
+        if (completedRanks.Contains(selectedRank))
+        {
+            Debug.Log("Selected rank is already completed. Retrying...");
+            Invoke(nameof(AISelectRandomTarget), 1f);
+            return;
+        }
+
         if (!PlayerHasRankInHand(currentPlayer, selectedRank))
         {
             Invoke(nameof(AISelectRandomTarget), 2.2f);
@@ -268,51 +372,23 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
 
         Debug.Log(aiPlayer.PlayerName + " asking for rank " + selectedRank);
-        List<int> possibleTargets = new List<int>();
-        int count = ModeSelectionController.selectedPlayers;
 
-        for (int i = 0; i < players.Length; i++)
-        {
-            if (i != currentPlayer)
-            {
-                if (count == 2 && (i == 2 || i == 3)) continue;
-                if (count == 3 && i == 1) continue;
+        // ✅ FINAL TARGET SELECT
+        int randomTarget = SelectBestTarget(possibleTargets, selectedRank);
 
-                possibleTargets.Add(i);
-            }
-        }
+        int targetUIIndex = GetUIIndex(randomTarget);
+        currentTargetUI = uiPlayers[targetUIIndex];
 
-        int randomTarget = -1;
-        int attemptsTarget = 0;
+        int currentUIIndex = GetUIIndex(currentPlayer);
+        uiPlayers[currentUIIndex].ShowAskPopup(players[randomTarget].PlayerName, selectedRank);
 
-        do
-        {
-            randomTarget = possibleTargets[Random.Range(0, possibleTargets.Count)];
-            attemptsTarget++;
-
-        }
-        while (AlreadyAskedThisTurn(randomTarget, selectedRank) && attemptsTarget < 10);
-
-        // ⭐ if all targets were already asked for this rank, pick another rank
-        if (AlreadyAskedThisTurn(randomTarget, selectedRank))
-        {
-            Invoke(nameof(AISelectRandomTarget), 2.2f);
-            return;
-        }
         Debug.Log("AI asking " + players[randomTarget].PlayerName +
-          " for rank " + selectedRank);
-        currentTargetUI = uiPlayers[randomTarget];
-        uiPlayers[currentPlayer].ShowAskPopup(players[randomTarget].PlayerName, selectedRank);
+                  " for rank " + selectedRank);
 
-        Debug.Log(players[currentPlayer].PlayerName +
-                  " is asking " + players[randomTarget].PlayerName);
-
-        // currentTargetUI.ShowTargetPopup();
         turnActionRunning = true;
-        // Simulate ask resolve after 2 sec
+
         Invoke(nameof(ResolveAsk), 2f);
     }
-
     void ResolveAsk()
     {
         if (gameOver)
@@ -328,6 +404,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         if (targetPlayer.HasRank(selectedRank))
         {
+            UpdateMemoryOnSuccess(currentTargetUI.GetPlayerID(), selectedRank);
             int count = targetPlayer.PlayerHand.Cards.FindAll(c => c.Rank == selectedRank).Count;
             currentTargetUI.ShowReplyPopup(true, count, selectedRank);
             Debug.Log("SUCCESS! Cards transferred.");
@@ -342,6 +419,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
         else
         {
+            UpdateMemoryOnFailure(currentTargetUI.GetPlayerID(), selectedRank);
             Debug.Log("GO FISH!");
             // ⭐ remember the asked rank before drawing
             lastAskedRank = selectedRank;
@@ -428,10 +506,12 @@ public class GameManager : MonoBehaviour, ICardOwner
             return;
         }
 
-        currentTargetUI = uiPlayers[targetID];
+        int uiIndex = GetUIIndex(targetID);
+        currentTargetUI = uiPlayers[uiIndex];
         askedRankTargetThisTurn.Add(key);
 
-        uiPlayers[currentPlayer].ShowAskPopup(players[targetID].PlayerName, selectedRank);
+        int currentUIIndex = GetUIIndex(currentPlayer);
+        uiPlayers[currentUIIndex].ShowAskPopup(players[targetID].PlayerName, selectedRank);
         currentTargetUI.ShowTargetPopup();
         turnActionRunning = true;
 
@@ -482,9 +562,11 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     void RefreshAllHands()
     {
-        for (int i = 0; i < players.Length; i++)
+        for (int i = 0; i < activePlayers.Length; i++)
         {
-            bool showFront = players[i].IsHuman;
+            int id = activePlayers[i];
+            bool showFront = players[id].IsHuman;
+
             uiPlayers[i].RefreshHand(showFront);
         }
     }
@@ -527,10 +609,11 @@ public class GameManager : MonoBehaviour, ICardOwner
 
             RemoveTopDeckVisual();
 
-            yield return StartCoroutine(
-                AnimateCardMove(deckPosition, uiPlayers[playerID].transform, drawn)
-            );
+            int uiIndex = GetUIIndex(playerID);
 
+            yield return StartCoroutine(
+                AnimateCardMove(deckPosition, uiPlayers[uiIndex].transform, drawn)
+            );
             player.AddCard(drawn);
         }
 
@@ -582,7 +665,9 @@ public class GameManager : MonoBehaviour, ICardOwner
     }
     IEnumerator AnimateCardMove(Transform from, Transform to, Card card)
     {
-        GameObject flyingCard = Instantiate(uiPlayers[currentPlayer].cardPrefab, from.position, Quaternion.identity);
+        int uiIndex = GetUIIndex(currentPlayer);
+
+        GameObject flyingCard = Instantiate(uiPlayers[uiIndex].cardPrefab, from.position, Quaternion.identity);
         // ⭐ TEMPORARY: bring card above UI during animation
         SortingGroup sg = flyingCard.GetComponent<SortingGroup>();
         if (sg != null)
@@ -599,20 +684,47 @@ public class GameManager : MonoBehaviour, ICardOwner
             card.Rank,
             cardData.GetSuitSprite(card.Suit), cardData.SuitColors[(int)card.Suit],
             this, 999);
+        // ⭐ FORCE INITIAL STATE (VERY IMPORTANT)
+        uiCard.ShowFront(false);
 
         bool comingFromDeck = (from == deckPosition);
-        bool receivingHuman = players[currentPlayer].IsHuman;
 
         if (comingFromDeck)
         {
-            // Deck → Player
-            uiCard.ShowFront(receivingHuman);
+            if (players[currentPlayer].IsHuman)
+            {
+                uiCard.ShowFront(true);
+            }
+            else
+            {
+                uiCard.ShowFront(false);
+            }
         }
         else
         {
-            // Target Player → Player
             uiCard.ShowFront(true);
         }
+
+        // ⭐ STEP 4 — WAIT ONE FRAME (VERY IMPORTANT)
+        yield return null;
+
+        // ⭐ RE-APPLY AGAIN AFTER FRAME (FINAL GUARANTEE)
+        if (comingFromDeck)
+        {
+            if (players[currentPlayer].IsHuman)
+            {
+                uiCard.ShowFront(true);
+            }
+            else
+            {
+                uiCard.ShowFront(false);
+            }
+        }
+        else
+        {
+            uiCard.ShowFront(true);
+        }
+
         flyingCard.transform.localScale = Vector3.one * 0.7f;
 
         Vector3 midPoint = (from.position + to.position) / 2 + Vector3.up * 1.5f;
@@ -641,9 +753,11 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         if (gameOver)
             yield break;
-        Transform fromTransform = uiPlayers[fromID].transform;
-        Transform toTransform = uiPlayers[toID].transform;
+        int fromUI = GetUIIndex(fromID);
+        int toUI = GetUIIndex(toID);
 
+        Transform fromTransform = uiPlayers[fromUI].transform;
+        Transform toTransform = uiPlayers[toUI].transform;
         foreach (Card c in cards)
         {
             yield return StartCoroutine(
@@ -651,6 +765,17 @@ public class GameManager : MonoBehaviour, ICardOwner
             );
 
             players[toID].AddCard(c);
+            // ⭐ STEP 1: receiver gets HIGH confidence
+            aiMemory.AddConfidence(toID, c.Rank, 6f);
+
+            // ⭐ STEP 2: all other players LOW confidence (they probably don't have it)
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (i != toID)
+                {
+                    aiMemory.AddConfidence(i, c.Rank, -2f);
+                }
+            }
         }
 
         // wait small moment so user sees animation clearly
@@ -673,7 +798,8 @@ public class GameManager : MonoBehaviour, ICardOwner
         if (gameOver)
             yield break;
         Transform fromTransform = deckPosition;
-        Transform toTransform = uiPlayers[currentPlayer].transform;
+        int uiIndex = GetUIIndex(currentPlayer);
+        Transform toTransform = uiPlayers[uiIndex].transform;
         yield return StartCoroutine(
             AnimateCardMove(fromTransform, toTransform, drawn)
         );
@@ -686,41 +812,40 @@ public class GameManager : MonoBehaviour, ICardOwner
         CheckForBook(currentPlayer);
 
         // ⭐ check if deck is now empty AFTER draw
-        // ⭐ check if deck is now empty AFTER draw
-        if (deck.CardCount() == 0)
-        {
-            Debug.Log("Last deck card drawn.");
+        // if (deck.CardCount() == 0)
+        // {
+        //     Debug.Log("Last deck card drawn.");
 
-            lastDeckCardDrawn = true;
+        //     lastDeckCardDrawn = true;
 
-            // ⭐ check if book formed from this draw
-            bool bookExists = false;
+        //     // ⭐ check if book formed from this draw
+        //     bool bookExists = false;
 
-            Dictionary<int, int> rankCount = new Dictionary<int, int>();
+        //     Dictionary<int, int> rankCount = new Dictionary<int, int>();
 
-            foreach (Card c in players[currentPlayer].PlayerHand.Cards)
-            {
-                if (!rankCount.ContainsKey(c.Rank))
-                    rankCount[c.Rank] = 0;
+        //     foreach (Card c in players[currentPlayer].PlayerHand.Cards)
+        //     {
+        //         if (!rankCount.ContainsKey(c.Rank))
+        //             rankCount[c.Rank] = 0;
 
-                rankCount[c.Rank]++;
+        //         rankCount[c.Rank]++;
 
-                if (rankCount[c.Rank] == 4)
-                {
-                    bookExists = true;
-                    break;
-                }
-            }
+        //         if (rankCount[c.Rank] == 4)
+        //         {
+        //             bookExists = true;
+        //             break;
+        //         }
+        //     }
 
-            // ⭐ if NO book → end game immediately
-            if (!bookExists)
-            {
-                Debug.Log("Deck empty and no book possible. Ending game immediately.");
+        //     // ⭐ if NO book → end game immediately
+        //     if (!bookExists)
+        //     {
+        //         Debug.Log("Deck empty and no book possible. Ending game immediately.");
 
-                StartCoroutine(EndGameAfterDelay());
-                yield break;
-            }
-        }
+        //         StartCoroutine(EndGameAfterDelay());
+        //         yield break;
+        //     }
+        // }
 
         Debug.Log("Drew card of rank: " + drawn.Rank);
 
@@ -730,8 +855,8 @@ public class GameManager : MonoBehaviour, ICardOwner
             Debug.Log("Drawn card matches! Continue turn.");
 
             // ⭐ show lucky popup message
-            uiPlayers[currentPlayer].ShowLuckyDrawPopup(drawn.Rank);
-
+            int uiIndex2 = GetUIIndex(currentPlayer);
+            uiPlayers[uiIndex2].ShowLuckyDrawPopup(drawn.Rank);
             if (!players[currentPlayer].IsHuman)
                 Invoke(nameof(AISelectRandomTarget), 2.1f);
         }
@@ -744,6 +869,14 @@ public class GameManager : MonoBehaviour, ICardOwner
         // ⭐ reset stored rank after draw
         lastAskedRank = -1;
         turnActionRunning = false;
+
+        // ⭐ AFTER everything finishes → check deck empty
+        if (deck.CardCount() == 0)
+        {
+            Debug.Log("Deck empty after draw. Waiting for book resolution.");
+
+            StartCoroutine(EndGameAfterDelay());
+        }
 
     }
 
@@ -792,11 +925,12 @@ public class GameManager : MonoBehaviour, ICardOwner
             if (group.Value.Count == 4)
             {
                 Debug.Log(player.PlayerName + " completed a BOOK of rank " + group.Key);
-
+                completedRanks.Add(group.Key);
                 // ⭐ prevent asking this rank again
                 if (selectedRank == group.Key)
                     selectedRank = -1;
 
+                aiMemory.ClearRank(group.Key);
                 StartCoroutine(HandleBook(playerID, group.Key, group.Value));
 
                 // ⭐ if deck already empty when book formed → end game
@@ -807,15 +941,19 @@ public class GameManager : MonoBehaviour, ICardOwner
                 }
                 break;
             }
+
         }
     }
 
     IEnumerator HandleBook(int playerID, int rank, List<Card> cards)
     {
+        CancelInvoke(nameof(AISelectRandomTarget));
         turnActionRunning = true;
         Player player = players[playerID];
 
-        Transform fromTransform = uiPlayers[playerID].transform;
+        int uiIndex = GetUIIndex(playerID);
+
+        Transform fromTransform = uiPlayers[uiIndex].transform;
 
         // choose book display position (right side of player)
         Vector3 bookPosition = fromTransform.position + Vector3.right * 2f;
@@ -830,7 +968,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
 
         player.AddPoint();
-        uiPlayers[playerID].UpdateScore(player.Score);
+        uiPlayers[uiIndex].UpdateScore(player.Score);
         Debug.Log("Score of " + player.PlayerName + ": " + player.Score);
 
         RefreshAllHands();
@@ -839,14 +977,22 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         turnActionRunning = false;
         selectedRank = -1; // ⭐ reset asking rank when book forms
-
-        // ⭐ if the last deck card caused this book, end the game now
-        if (lastDeckCardDrawn)
+                           // ⭐ AFTER book fully completes → check deck empty
+        if (deck.CardCount() == 0)
         {
-            Debug.Log("Last deck card completed a book. Ending game.");
+            Debug.Log("Deck empty after book completion. Ending game.");
+
             StartCoroutine(EndGameAfterDelay());
-            lastDeckCardDrawn = false;
         }
+        // ⭐ if the last deck card caused this book, end the game now
+        // if (lastDeckCardDrawn)
+        // {
+        //     Debug.Log("Last deck card completed a book. Ending game.");
+        //     StartCoroutine(EndGameAfterDelay());
+        //     lastDeckCardDrawn = false;
+        // }
+
+
     }
 
     void TriggerGameOver()
@@ -900,4 +1046,94 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         StartCoroutine(DrawCardWithAnimation(drawn));
     }
+    void UpdateMemoryOnSuccess(int playerID, int rank)
+    {
+        // target had cards → strong confidence
+        aiMemory.AddConfidence(playerID, rank, 5f);
+
+        // ⭐ asking player now has those cards too
+        aiMemory.AddConfidence(currentPlayer, rank, 3f);
+    }
+    void UpdateMemoryOnFailure(int playerID, int rank)
+    {
+        // target probably doesn't have it
+        aiMemory.AddConfidence(playerID, rank, -3f);
+        // ⭐ small uncertainty (not 100% sure)
+        aiMemory.AddConfidence(playerID, rank, -1f);
+
+        // ⭐ asking player likely has it (they asked!)
+        aiMemory.AddConfidence(currentPlayer, rank, 2f);
+    }
+
+    int SelectBestTarget(List<int> possibleTargets, int rank)
+    {
+        int bestTarget = -1;
+        float bestScore = float.MinValue;
+
+        foreach (int target in possibleTargets)
+        {
+            if (AlreadyAskedThisTurn(target, rank))
+                continue;
+
+            float memoryScore = aiMemory.GetConfidence(target, rank);
+            // ⭐ STEP 4 ADD HERE (VERY IMPORTANT)
+            if (PlayerHasRankInHand(currentPlayer, rank))
+            {
+                memoryScore += 2f; // AI prefers ranks it owns
+            }
+
+            float randomFactor = Random.Range(0f, 1f);
+
+            float totalScore = (memoryScore * 0.8f) + (randomFactor * 0.2f);
+
+            if (totalScore > bestScore)
+            {
+                bestScore = totalScore;
+                bestTarget = target;
+            }
+        }
+
+        // fallback
+        if (bestTarget == -1 && possibleTargets.Count > 0)
+        {
+            bestTarget = possibleTargets[Random.Range(0, possibleTargets.Count)];
+        }
+
+        return bestTarget;
+    }
+
+    List<int> GetSortedRanks(List<Card> aiCards)
+    {
+        Dictionary<int, float> rankScores = new Dictionary<int, float>();
+
+        foreach (Card c in aiCards)
+        {
+            int rank = c.Rank;
+
+            if (completedRanks.Contains(rank))
+                continue;
+
+            if (!rankScores.ContainsKey(rank))
+                rankScores[rank] = 0f;
+
+            // memory score
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (i == currentPlayer) continue;
+                rankScores[rank] += aiMemory.GetConfidence(i, rank);
+            }
+
+            // count bonus
+            int count = aiCards.FindAll(x => x.Rank == rank).Count;
+            rankScores[rank] += count * 1.5f;
+        }
+
+        // sort ranks by score (highest first)
+        List<int> sortedRanks = new List<int>(rankScores.Keys);
+        sortedRanks.Sort((a, b) => rankScores[b].CompareTo(rankScores[a]));
+
+        return sortedRanks;
+    }
+
+
 }

@@ -1791,7 +1791,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6017494231894530733, guid: bc0a83016ca6efb4daf319c292aad8f8, type: 3}
       propertyPath: m_Name
-      value: 'BottomPlayer '
+      value: 'BottomPlayer_0 '
       objectReference: {fileID: 0}
     - target: {fileID: 6017494231894530733, guid: bc0a83016ca6efb4daf319c292aad8f8, type: 3}
       propertyPath: m_IsActive
@@ -2410,7 +2410,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6017494231894530733, guid: bc0a83016ca6efb4daf319c292aad8f8, type: 3}
       propertyPath: m_Name
-      value: RightPlayer
+      value: RightPlayer_3
       objectReference: {fileID: 0}
     - target: {fileID: 6017494231894530733, guid: bc0a83016ca6efb4daf319c292aad8f8, type: 3}
       propertyPath: m_IsActive
@@ -4946,12 +4946,32 @@ MonoBehaviour:
   cardData: {fileID: 11400000, guid: ea065b0040d136644b8c59ad0373b00e, type: 2}
   uiPlayers:
   - {fileID: 969152393}
-  - {fileID: 789724180}
   - {fileID: 691062754}
+  - {fileID: 789724180}
   - {fileID: 136434405}
   deckPosition: {fileID: 705330599}
   cardBackPrefab: {fileID: 6689977133096636703, guid: b5583f7bab670c747a1b68ed3dde7d14, type: 3}
-  players: []
+  mode2Players:
+  - {fileID: 969152393}
+  - {fileID: 789724180}
+  mode3Players:
+  - {fileID: 969152393}
+  - {fileID: 691062754}
+  - {fileID: 136434405}
+  mode4Players:
+  - {fileID: 969152393}
+  - {fileID: 691062754}
+  - {fileID: 789724180}
+  - {fileID: 136434405}
+  players:
+  - PlayerName: 
+    IsHuman: 0
+  - PlayerName: 
+    IsHuman: 0
+  - PlayerName: 
+    IsHuman: 0
+  - PlayerName: 
+    IsHuman: 0
   gameOverUI: {fileID: 522639970}
 --- !u!4 &783001980
 Transform:
@@ -9013,7 +9033,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6017494231894530733, guid: bc0a83016ca6efb4daf319c292aad8f8, type: 3}
       propertyPath: m_Name
-      value: 'LeftPlayer '
+      value: LeftPlayer_1
       objectReference: {fileID: 0}
     - target: {fileID: 6017494231894530733, guid: bc0a83016ca6efb4daf319c292aad8f8, type: 3}
       propertyPath: m_IsActive
@@ -10149,7 +10169,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1818474522
 RectTransform:
   m_ObjectHideFlags: 0
@@ -12574,7 +12594,7 @@ PrefabInstance:
       objectReference: {fileID: 783001979}
     - target: {fileID: 6017494231894530733, guid: bc0a83016ca6efb4daf319c292aad8f8, type: 3}
       propertyPath: m_Name
-      value: TopPlayer
+      value: TopPlayer_2
       objectReference: {fileID: 0}
     - target: {fileID: 6017494231894530733, guid: bc0a83016ca6efb4daf319c292aad8f8, type: 3}
       propertyPath: m_IsActive

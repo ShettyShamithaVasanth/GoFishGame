@@ -63,16 +63,26 @@ public class UICard : MonoBehaviour
     }
 
     public void ShowFront(bool show)
+{
+    if (cardFront == null || cardBack == null)
     {
-        if (cardFront == null || cardBack == null)
-        {
-            Debug.LogError("CardFront or CardBack not assigned!");
-            return;
-        }
-
-        cardFront.SetActive(show);
-        cardBack.SetActive(!show);
+        Debug.LogError("CardFront or CardBack not assigned!");
+        return;
     }
+
+    // ⭐ HARD FORCE (no flicker possible)
+    cardFront.SetActive(show);
+    cardBack.SetActive(!show);
+
+    // ⭐ EXTRA SAFETY — disable renderers manually
+    SpriteRenderer[] frontRenderers = cardFront.GetComponentsInChildren<SpriteRenderer>(true);
+    foreach (var r in frontRenderers)
+        r.enabled = show;
+
+    SpriteRenderer[] backRenderers = cardBack.GetComponentsInChildren<SpriteRenderer>(true);
+    foreach (var r in backRenderers)
+        r.enabled = !show;
+}
 
     void OnMouseDown()
     {
