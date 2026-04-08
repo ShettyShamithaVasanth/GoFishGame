@@ -3,6 +3,7 @@ using TMPro;
 using System.Collections.Generic;
 using DG.Tweening;
 using System.Collections;
+using UnityEngine.InputSystem;
 
 public class UIPlayer : MonoBehaviour, ICardOwner
 {
@@ -214,26 +215,34 @@ public class UIPlayer : MonoBehaviour, ICardOwner
         return playerInstance.PlayerID;
     }
 
-    void OnMouseDown()
+    private void OnEnable()
+    {
+        InputHandler.OnClick += HandleClick;
+    }
+
+    private void OnDisable()
+    {
+        InputHandler.OnClick -= HandleClick;
+    }
+
+    void HandleClick(Vector2 screenPos)
     {
         if (!canInteract)
             return;
 
-        if (playerInstance == null)
-            return;
-
         GameManager gm = FindFirstObjectByType<GameManager>();
 
-        if (gm == null)
+        if (gm == null || !gm.GetCurrentPlayer().IsHuman)
             return;
 
-        if (gm.GetCurrentPlayer() == null)
-            return;
+        Vector2 worldPos = Camera.main.ScreenToWorldPoint(screenPos);
 
-        Debug.Log("Clicked on " + playerInstance.PlayerName);
+        RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
 
-        if (gm.GetCurrentPlayer().IsHuman)
+        if (hit.collider != null && hit.collider.gameObject == gameObject)
         {
+            Debug.Log("Player Clicked");
+
             gm.HumanSelectTarget(playerInstance.PlayerID);
         }
     }
@@ -259,6 +268,7 @@ public class UIPlayer : MonoBehaviour, ICardOwner
         selectedCard.transform.localScale = Vector3.one * 1.2f;
         StartCoroutine(DelayedSelect(rank, gm));
         // gm.SetSelectedRank(rank);
+
     }
     IEnumerator DelayedSelect(int rank, GameManager gm)
     {

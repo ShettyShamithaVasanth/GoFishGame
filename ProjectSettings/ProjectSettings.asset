@@ -17,8 +17,8 @@ PlayerSettings:
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
-  m_ShowUnitySplashScreen: 1
-  m_ShowUnitySplashLogo: 1
+  m_ShowUnitySplashScreen: 0
+  m_ShowUnitySplashLogo: 0
   m_SplashScreenOverlayOpacity: 1
   m_SplashScreenAnimation: 1
   m_SplashScreenLogoStyle: 1
@@ -60,9 +60,9 @@ PlayerSettings:
   androidShowActivityIndicatorOnLoading: -1
   iosUseCustomAppBackgroundBehavior: 0
   allowedAutorotateToPortrait: 1
-  allowedAutorotateToPortraitUpsideDown: 1
-  allowedAutorotateToLandscapeRight: 1
-  allowedAutorotateToLandscapeLeft: 1
+  allowedAutorotateToPortraitUpsideDown: 0
+  allowedAutorotateToLandscapeRight: 0
+  allowedAutorotateToLandscapeLeft: 0
   useOSAutorotation: 1
   use32BitDisplayBuffer: 1
   preserveFramebufferAlpha: 0
@@ -72,7 +72,7 @@ PlayerSettings:
   androidUseSwappy: 1
   androidDisplayOptions: 1
   androidBlitType: 0
-  androidResizeableActivity: 1
+  androidResizeableActivity: 0
   androidDefaultWindowWidth: 1920
   androidDefaultWindowHeight: 1080
   androidMinimumWindowWidth: 400
@@ -144,7 +144,8 @@ PlayerSettings:
   visionOSBundleVersion: 1.0
   tvOSBundleVersion: 1.0
   bundleVersion: 1.0
-  preloadedAssets: []
+  preloadedAssets:
+  - {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -166,6 +167,7 @@ PlayerSettings:
   androidMaxAspectRatio: 2.4
   androidMinAspectRatio: 1
   applicationIdentifier:
+    Android: com.go.fish
     Standalone: com.DefaultCompany.2D-URP
   buildNumber:
     Standalone: 0
@@ -388,7 +390,10 @@ PlayerSettings:
       m_Height: 36
       m_Kind: 0
       m_SubKind: 
-  m_BuildTargetBatching: []
+  m_BuildTargetBatching:
+  - m_BuildTarget: Android
+    m_StaticBatching: 1
+    m_DynamicBatching: 0
   m_BuildTargetShaderSettings: []
   m_BuildTargetGraphicsJobs: []
   m_BuildTargetGraphicsJobMode: []
@@ -409,7 +414,10 @@ PlayerSettings:
   m_BuildTargetGroupLightmapSettings: []
   m_BuildTargetGroupLoadStoreDebugModeSettings: []
   m_BuildTargetNormalMapEncoding: []
-  m_BuildTargetDefaultTextureCompressionFormat: []
+  m_BuildTargetDefaultTextureCompressionFormat:
+  - serializedVersion: 3
+    m_BuildTarget: Android
+    m_Formats: 01000000
   playModeTestRunnerEnabled: 0
   runPlayModeTestAsEditModeTest: 0
   actionOnDotNetUnhandledException: 1
@@ -676,7 +684,7 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Android: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
+    Android: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D;ODIN_INSPECTOR;ODIN_INSPECTOR_3;ODIN_INSPECTOR_3_1;ODIN_INSPECTOR_3_2;ODIN_INSPECTOR_3_3
     EmbeddedLinux: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
     GameCoreScarlett: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
     GameCoreXboxOne: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
@@ -687,7 +695,7 @@ PlayerSettings:
     PS4: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
     PS5: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
     QNX: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
-    Standalone: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
+    Standalone: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D;ODIN_INSPECTOR;ODIN_INSPECTOR_3;ODIN_INSPECTOR_3_1;ODIN_INSPECTOR_3_2;ODIN_INSPECTOR_3_3
     VisionOS: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
     WebGL: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
     Windows Store Apps: DOTWEEN;DOTWEEN_NOAUDIO;DOTWEEN_NOPHYSICS;DOTWEEN_NOPHYSICS2D
@@ -790,7 +798,7 @@ PlayerSettings:
   qnxGraphicConfPath: 
   apiCompatibilityLevel: 6
   captureStartupLogs: {}
-  activeInputHandler: 2
+  activeInputHandler: 1
   windowsGamepadBackendHint: 0
   cloudProjectId: e640df62-b0da-49f3-8c54-c4405519284a
   framebufferDepthMemorylessMode: 0

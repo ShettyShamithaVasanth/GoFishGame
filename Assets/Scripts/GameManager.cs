@@ -38,6 +38,7 @@ public class GameManager : MonoBehaviour, ICardOwner
     private bool waitingForTarget = false;
     private bool waitingForDeckClick = false;
     private bool turnActionRunning = false;
+    private bool bookJustFormed = false; // 🔥 detects recent book
     // private bool waitingForNextTurnButton = false;
 
     // ⭐ tracks asked rank per target in current turn
@@ -46,11 +47,27 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public GameOverUI gameOverUI;
     private bool gameOver = false;
+    private bool lockTargetSelection = false;
+    public ToastUI toastUI;
     // ⭐ tracks if the last deck card was drawn
     // private bool lastDeckCardDrawn = false;
 
     void Start()
     {
+        Debug.Log("GameManager START");
+
+        // 🔥 RESET EVERYTHING
+        gameOver = false;
+        waitingForDeckClick = false;
+        waitingForTarget = false;
+        turnActionRunning = false;
+
+        // 🔥 IMPORTANT: hide game over UI if still active
+        if (gameOverUI != null && gameOverUI.gameOverPanel != null)
+        {
+            gameOverUI.gameOverPanel.SetActive(false);
+        }
+
         SetupGame();
     }
 
@@ -77,6 +94,8 @@ public class GameManager : MonoBehaviour, ICardOwner
     }
     void SetupGame()
     {
+        Debug.Log("SetupGame CALLED");
+
         aiMemory = new AIMemory();
 
         // 1️⃣ Create Deck
@@ -173,9 +192,8 @@ public class GameManager : MonoBehaviour, ICardOwner
             GameObject cardObj = Instantiate(cardBackPrefab, deckPosition);
             DOVirtual.DelayedCall(0.5f, () =>
             {
-
-                cardObj.SetActive(true);
-            }); // Staggered delay for visual effect
+                if (cardObj != null) cardObj.SetActive(true);
+            }).SetLink(cardObj); // 🔥 VERY IMPORTANT
 
             cardObj.transform.localPosition =
                 new Vector3(0, i * 0.06f, 0);
@@ -198,7 +216,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             Collider2D col = cardObj.GetComponent<Collider2D>();
             if (col != null)
             {
-                col.enabled = (i == totalDeckCards - 1);
+                col.enabled = false; // 🔥 disable ALL deck card colliders
             }
             deckVisualCards.Add(cardObj);
         }
@@ -208,6 +226,11 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         if (gameOver)
             return;
+        // ⭐ ALWAYS CLEAR PREVIOUS TOAST WHEN NEW TURN STARTS
+        if (toastUI != null)
+        {
+            toastUI.HideToast();
+        }
 
         // ⭐ clear all target popups from previous turn
         foreach (UIPlayer ui in uiPlayers)
@@ -219,8 +242,10 @@ public class GameManager : MonoBehaviour, ICardOwner
         {
             selectedRank = -1;
             waitingForTarget = false;
-        }
 
+            // ⭐ TOAST MESSAGE
+            toastUI.ShowToast("Your turn! Select a rank card");
+        }
         Debug.Log("Turn: " + players[currentPlayer].PlayerName);
 
         if (!players[currentPlayer].IsHuman)
@@ -263,7 +288,19 @@ public class GameManager : MonoBehaviour, ICardOwner
         // Start next
         // waitingForNextTurnButton = true;
         // Debug.Log("Turn ended. Waiting for NextTurn button.");
-        Invoke(nameof(StartCurrentTurn), 0.5f);
+        // 🔥 DELAY NEXT TURN IF BOOK JUST FORMED
+        if (bookJustFormed)
+        {
+            Debug.Log("Book formed → delaying next turn");
+
+            bookJustFormed = false; // reset
+
+            Invoke(nameof(StartCurrentTurn), 5f); // 👈 delay (you can tune 1.5–2.0)
+        }
+        else
+        {
+            Invoke(nameof(StartCurrentTurn), 0.5f); // normal flow
+        }
     }
 
     // public void StartNextTurnFromButton()
@@ -297,9 +334,12 @@ public class GameManager : MonoBehaviour, ICardOwner
             return;
         }
 
-        foreach (UIPlayer ui in uiPlayers)
+        if (!lockTargetSelection)
         {
-            ui.HideTargetPopup();
+            foreach (UIPlayer ui in uiPlayers)
+            {
+                ui.HideTargetPopup();
+            }
         }
 
         if (turnActionRunning)
@@ -429,7 +469,12 @@ public class GameManager : MonoBehaviour, ICardOwner
             {
                 Debug.Log("Waiting for human to click GO FISH button");
 
-                // ⭐ enable Go Fish button
+                // ⭐ SHOW TOAST
+                if (toastUI != null)
+                {
+                    toastUI.ShowToast("Please click Go Fish red icon button");
+                }
+
                 waitingForDeckClick = true;
 
                 return;
@@ -468,10 +513,20 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public void HumanSelectTarget(int targetID)
     {
-        // ⭐ clear old target popups
-        foreach (UIPlayer ui in uiPlayers)
+        toastUI.HideToast();
+        // 🚫 BLOCK if GO FISH pending
+        if (lockTargetSelection)
         {
-            ui.HideTargetPopup();
+            Debug.Log("Target selection locked until card draw.");
+            return;
+        }
+        // Only clear if NOT locked
+        if (!lockTargetSelection)
+        {
+            foreach (UIPlayer ui in uiPlayers)
+            {
+                ui.HideTargetPopup();
+            }
         }
         if (turnActionRunning)
             return;
@@ -536,11 +591,14 @@ public class GameManager : MonoBehaviour, ICardOwner
             selectedRank = -1;
 
             Debug.Log("Human continues turn.");
+            toastUI.ShowToast("You got cards! Select another rank");
             return; // DO NOT END TURN
         }
 
         // CASE 2 — GO FISH
         Debug.Log("GO FISH!");
+        toastUI.ShowToast("Go Fish! Draw a card from deck");
+        lockTargetSelection = true; // 🔥 LOCK UI
         // ⭐ remember asked rank before deck draw
         lastAskedRank = selectedRank;
 
@@ -554,6 +612,8 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         selectedRank = rank;
         waitingForTarget = true;
+        toastUI.HideToast();
+        toastUI.ShowToast("Now select a player");
 
         Debug.Log("Selected Rank: " + rank);
         Debug.Log("Now select a target player");
@@ -612,7 +672,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             int uiIndex = GetUIIndex(playerID);
 
             yield return StartCoroutine(
-                AnimateCardMove(deckPosition, uiPlayers[uiIndex].transform, drawn)
+                AnimateCardMove(deckPosition, uiPlayers[uiIndex].transform, drawn, playerID)
             );
             player.AddCard(drawn);
         }
@@ -622,23 +682,36 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public void OnDeckClicked()
     {
+        toastUI.HideToast();
+        Debug.Log("Deck clicked.");
         if (gameOver)
+        {
+            Debug.Log("Game is already over. Deck click ignored.");
             return;
+        }
+
         if (!waitingForDeckClick)
+        {
+            Debug.Log("not waiting for deck click. Ignoring.");
             return;
+        }
+
 
         Card drawn = deck.GetCard();
 
         if (drawn == null)
         {
+            Debug.Log("Deck is empty. Ending game.");
             TriggerGameOver();
             return;
         }
-
+        Debug.Log("Card drawn from deck: Rank " + drawn.Rank + ", Suit " + drawn.Suit);
         waitingForDeckClick = false;
+        lockTargetSelection = false; // 🔥 UNLOCK after draw
 
+        Debug.Log("removed top deck visual");
         RemoveTopDeckVisual();
-
+        toastUI.ShowToast("Drawing a card...");
         StartCoroutine(DrawCardWithAnimation(drawn));
     }
 
@@ -663,7 +736,7 @@ public class GameManager : MonoBehaviour, ICardOwner
                 col.enabled = true;
         }
     }
-    IEnumerator AnimateCardMove(Transform from, Transform to, Card card)
+    IEnumerator AnimateCardMove(Transform from, Transform to, Card card, int targetPlayerID)
     {
         int uiIndex = GetUIIndex(currentPlayer);
 
@@ -691,17 +764,14 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         if (comingFromDeck)
         {
-            if (players[currentPlayer].IsHuman)
-            {
+            if (players[targetPlayerID].IsHuman)
                 uiCard.ShowFront(true);
-            }
             else
-            {
                 uiCard.ShowFront(false);
-            }
         }
         else
         {
+            // transfer between players → always visible
             uiCard.ShowFront(true);
         }
 
@@ -711,14 +781,10 @@ public class GameManager : MonoBehaviour, ICardOwner
         // ⭐ RE-APPLY AGAIN AFTER FRAME (FINAL GUARANTEE)
         if (comingFromDeck)
         {
-            if (players[currentPlayer].IsHuman)
-            {
+            if (players[targetPlayerID].IsHuman)
                 uiCard.ShowFront(true);
-            }
             else
-            {
                 uiCard.ShowFront(false);
-            }
         }
         else
         {
@@ -729,8 +795,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         Vector3 midPoint = (from.position + to.position) / 2 + Vector3.up * 1.5f;
 
-        Sequence seq = DOTween.Sequence();
-
+        Sequence seq = DOTween.Sequence().SetLink(flyingCard);
         seq.Append(flyingCard.transform.DOMove(midPoint, 0.3f).SetEase(Ease.OutQuad));
         seq.Append(flyingCard.transform.DOMove(to.position, 0.3f).SetEase(Ease.InQuad));
 
@@ -746,6 +811,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             sg.sortingOrder = 0;
         }
 
+        DOTween.Kill(flyingCard); // 🔥 kill all tweens on this object
         Destroy(flyingCard);
     }
 
@@ -761,7 +827,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         foreach (Card c in cards)
         {
             yield return StartCoroutine(
-                AnimateCardMove(fromTransform, toTransform, c)
+               AnimateCardMove(fromTransform, toTransform, c, toID)
             );
 
             players[toID].AddCard(c);
@@ -779,9 +845,16 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
 
         // wait small moment so user sees animation clearly
+        // wait small moment so user sees animation clearly
         yield return new WaitForSeconds(0.25f);
 
+        // ⭐ STEP 1: show updated hand first
         RefreshAllHands();
+
+        // ⭐ STEP 2: WAIT so player can SEE the new cards
+        yield return new WaitForSeconds(1.5f);  // 👉 you can tune (1.0 - 1.5)
+
+        // ⭐ STEP 3: NOW check for book
         CheckForBook(toID);
 
         turnActionRunning = false;
@@ -797,18 +870,57 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         if (gameOver)
             yield break;
+
+        // ⭐ CHECK IF THIS IS LAST CARD DRAWN BY AI
+        bool isLastCard = (deck.CardCount() == 0);
+
+        if (!players[currentPlayer].IsHuman && isLastCard)
+        {
+            Debug.Log("Last card drawn by AI → NO animation");
+
+            players[currentPlayer].AddCard(drawn);
+            RefreshAllHands();
+
+            // ⭐ ADD DELAY HERE ALSO
+            yield return new WaitForSeconds(1.5f);
+
+            CheckForBook(currentPlayer);
+
+            // ⭐ NORMAL FLOW CONTINUES
+            if (drawn.Rank == lastAskedRank)
+            {
+                if (!players[currentPlayer].IsHuman)
+                    Invoke(nameof(AISelectRandomTarget), 2.1f);
+            }
+            else
+            {
+                selectedRank = -1;
+                EndTurn();
+            }
+
+            lastAskedRank = -1;
+            turnActionRunning = false;
+
+            // ⭐ GAME END CHECK
+            StartCoroutine(EndGameAfterDelay());
+
+            yield break; // 🚨 VERY IMPORTANT
+        }
         Transform fromTransform = deckPosition;
         int uiIndex = GetUIIndex(currentPlayer);
         Transform toTransform = uiPlayers[uiIndex].transform;
         yield return StartCoroutine(
-            AnimateCardMove(fromTransform, toTransform, drawn)
-        );
-
+    AnimateCardMove(fromTransform, toTransform, drawn, currentPlayer));
         // ✅ AFTER animation finishes
         players[currentPlayer].AddCard(drawn);
+
+        // ⭐ STEP 1: show updated hand
         RefreshAllHands();
 
-        // ⭐ check if drawing this card created a BOOK
+        // ⭐ STEP 2: WAIT so player can SEE the drawn card
+        yield return new WaitForSeconds(1.5f);   // same delay as transfer
+
+        // ⭐ STEP 3: NOW check for book
         CheckForBook(currentPlayer);
 
         // ⭐ check if deck is now empty AFTER draw
@@ -877,6 +989,11 @@ public class GameManager : MonoBehaviour, ICardOwner
 
             StartCoroutine(EndGameAfterDelay());
         }
+        // ⭐ SHOW NEXT INSTRUCTION ONLY IF HUMAN TURN CONTINUES
+        if (players[currentPlayer].IsHuman && !gameOver)
+        {
+            toastUI.ShowToast("Your turn! Select a rank card");
+        }
 
     }
 
@@ -901,8 +1018,19 @@ public class GameManager : MonoBehaviour, ICardOwner
     // ⭐ handles final game end after last deck card
     IEnumerator EndGameAfterDelay()
     {
+        // ⭐ STEP 1 — wait for animations / book message
         yield return new WaitForSeconds(1.2f);
 
+        // ⭐ STEP 2 — HIDE TOAST BEFORE GAME OVER
+        if (toastUI != null)
+        {
+            toastUI.HideToast();
+        }
+
+        // ⭐ STEP 3 — small delay for smooth UX
+        yield return new WaitForSeconds(0.3f);
+
+        // ⭐ STEP 4 — NOW trigger game over
         TriggerGameOver();
     }
 
@@ -925,12 +1053,19 @@ public class GameManager : MonoBehaviour, ICardOwner
             if (group.Value.Count == 4)
             {
                 Debug.Log(player.PlayerName + " completed a BOOK of rank " + group.Key);
+                // ⭐ TOAST — BOOK STARTING
+                if (toastUI != null)
+                {
+                    if (players[playerID].IsHuman)
+                        toastUI.ShowToast("Book forming...");
+                }
                 completedRanks.Add(group.Key);
                 // ⭐ prevent asking this rank again
                 if (selectedRank == group.Key)
                     selectedRank = -1;
 
                 aiMemory.ClearRank(group.Key);
+                bookJustFormed = true; // 🔥 mark that book happened
                 StartCoroutine(HandleBook(playerID, group.Key, group.Value));
 
                 // ⭐ if deck already empty when book formed → end game
@@ -961,13 +1096,21 @@ public class GameManager : MonoBehaviour, ICardOwner
         foreach (Card c in cards)
         {
             yield return StartCoroutine(
-                AnimateCardMove(fromTransform, fromTransform, c)
+                AnimateCardMove(fromTransform, fromTransform, c, playerID)
             );
 
             player.PlayerHand.RemoveCard(c);
         }
 
         player.AddPoint();
+        // ⭐ TOAST — BOOK COMPLETED
+        if (toastUI != null)
+        {
+            if (players[playerID].IsHuman)
+                toastUI.ShowToastWithAutoHide("You completed a book!", 3f);
+            else
+                toastUI.ShowToastWithAutoHide(players[playerID].PlayerName + " completed a book!", 3f);
+        }
         uiPlayers[uiIndex].UpdateScore(player.Score);
         Debug.Log("Score of " + player.PlayerName + ": " + player.Score);
 
@@ -991,12 +1134,18 @@ public class GameManager : MonoBehaviour, ICardOwner
         //     StartCoroutine(EndGameAfterDelay());
         //     lastDeckCardDrawn = false;
         // }
-
+        bookJustFormed = false; // 🔥 safety reset
 
     }
 
     void TriggerGameOver()
     {
+        DOTween.KillAll();
+        // ⭐ EXTRA SAFETY — ensure toast is hidden
+        if (toastUI != null)
+        {
+            toastUI.HideToast();
+        }
         if (gameOver)
             return;
 
@@ -1020,6 +1169,10 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public void OnGoFishButtonClicked()
     {
+        if (toastUI != null)
+        {
+            toastUI.HideToast();
+        }
         // ⭐ Go Fish button should only work when waiting for deck click
         if (!waitingForDeckClick)
         {
@@ -1045,6 +1198,47 @@ public class GameManager : MonoBehaviour, ICardOwner
         RemoveTopDeckVisual();
 
         StartCoroutine(DrawCardWithAnimation(drawn));
+    }
+
+    public void RestartGame()
+    {
+        Debug.Log("RESTARTING GAME...");
+        DOTween.KillAll(); // 🔥 kill all tweens safely
+
+        // 🔥 STOP everything
+        StopAllCoroutines();
+        CancelInvoke();
+
+        // 🔥 RESET FLAGS
+        gameOver = false;
+        waitingForDeckClick = false;
+        waitingForTarget = false;
+        turnActionRunning = false;
+
+        selectedRank = -1;
+        lastAskedRank = -1;
+
+        askedRankTargetThisTurn.Clear();
+        completedRanks.Clear();
+
+        // 🔥 CLEAR DECK VISUALS
+        foreach (GameObject card in deckVisualCards)
+        {
+            Destroy(card);
+        }
+        deckVisualCards.Clear();
+
+        // 🔥 RESET PLAYERS UI
+        foreach (UIPlayer ui in uiPlayers)
+        {
+            ui.canInteract = true;
+
+            // clear cards visually
+            ui.RefreshHand(false); // temporary clear
+        }
+
+        // 🔥 RESTART GAME COMPLETELY
+        SetupGame();
     }
     void UpdateMemoryOnSuccess(int playerID, int rank)
     {

@@ -58,9 +58,20 @@ public class GameOverUI : MonoBehaviour
     {
         Debug.Log("PLAY AGAIN BUTTON PRESSED");
 
-        skipMenuOnReload = true;
+        // 🔥 Hide GameOver panel
+        gameOverPanel.SetActive(false);
 
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        // 🔥 Find GameManager and restart game
+        GameManager gm = FindFirstObjectByType<GameManager>();
+
+        if (gm != null)
+        {
+            gm.RestartGame();
+        }
+        else
+        {
+            Debug.LogError("GameManager not found!");
+        }
     }
     public void QuitGame()
     {
