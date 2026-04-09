@@ -14,6 +14,12 @@ public class DeckClickHandler : MonoBehaviour
 
     void HandleClick(Vector2 screenPos)
     {
+        if (Camera.main == null)
+        {
+            Debug.LogError("Main Camera not found! Make sure camera has 'MainCamera' tag.");
+            return;
+        }
+
         Vector2 worldPos = Camera.main.ScreenToWorldPoint(screenPos);
 
         RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
@@ -23,6 +29,13 @@ public class DeckClickHandler : MonoBehaviour
             Debug.Log("Deck Clicked");
 
             GameManager gm = FindFirstObjectByType<GameManager>();
+
+            if (gm == null)
+            {
+                Debug.LogError("GameManager NOT FOUND in scene!");
+                return;
+            }
+
             gm.OnDeckClicked();
         }
     }

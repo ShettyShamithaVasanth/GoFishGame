@@ -14,6 +14,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     [Header("Deck Visual")]
     public Transform deckPosition;      // empty object in center
+    private int maxVisibleDeckCards = 8; // 🔥 LIMIT visual cards
     public GameObject cardBackPrefab;   // card prefab for deck stack
     private List<GameObject> deckVisualCards = new List<GameObject>();
     private Deck deck;
@@ -187,7 +188,10 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         int totalDeckCards = deck.CardCount();
 
-        for (int i = 0; i < totalDeckCards; i++)
+        // 🔥 only show max 8 cards visually
+        int visualCount = Mathf.Min(totalDeckCards, maxVisibleDeckCards);
+
+        for (int i = 0; i < visualCount; i++)
         {
             GameObject cardObj = Instantiate(cardBackPrefab, deckPosition);
             DOVirtual.DelayedCall(0.5f, () =>
@@ -196,8 +200,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             }).SetLink(cardObj); // 🔥 VERY IMPORTANT
 
             cardObj.transform.localPosition =
-                new Vector3(0, i * 0.06f, 0);
-
+                new Vector3(0, i * 0.08f, 0); // slightly spaced better
             UICard uiCard = cardObj.GetComponent<UICard>();
 
             uiCard.cardData = cardData;
@@ -472,7 +475,7 @@ public class GameManager : MonoBehaviour, ICardOwner
                 // ⭐ SHOW TOAST
                 if (toastUI != null)
                 {
-                    toastUI.ShowToast("Please click Go Fish red icon button");
+                    toastUI.ShowToast("Please click  Fish  icon button");
                 }
 
                 waitingForDeckClick = true;
@@ -591,7 +594,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             selectedRank = -1;
 
             Debug.Log("Human continues turn.");
-            toastUI.ShowToast("You got cards! Select another rank");
+            toastUI.ShowToast("You got cards! Select any rank card");
             return; // DO NOT END TURN
         }
 
@@ -717,16 +720,23 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     void RemoveTopDeckVisual()
     {
-        if (deckVisualCards.Count == 0)
-            return;
+        int actualDeckCount = deck.CardCount(); // remaining real cards
+        int currentVisualCount = deckVisualCards.Count;
 
-        GameObject topCard = deckVisualCards[deckVisualCards.Count - 1];
+        // 🔥 calculate how many SHOULD be visible
+        int expectedVisualCount = Mathf.Min(actualDeckCount, maxVisibleDeckCards);
 
-        deckVisualCards.RemoveAt(deckVisualCards.Count - 1);
+        // 🔥 remove ONLY if visuals exceed expected
+        if (currentVisualCount > expectedVisualCount)
+        {
+            GameObject topCard = deckVisualCards[deckVisualCards.Count - 1];
 
-        Destroy(topCard);
+            deckVisualCards.RemoveAt(deckVisualCards.Count - 1);
 
-        // 👇 ENABLE NEW TOP CARD
+            Destroy(topCard);
+        }
+
+        // 👇 enable new top card collider
         if (deckVisualCards.Count > 0)
         {
             GameObject newTop = deckVisualCards[deckVisualCards.Count - 1];
