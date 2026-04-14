@@ -3,6 +3,12 @@ using UnityEngine.Rendering;
 using System.Collections.Generic;
 using DG.Tweening;
 using System.Collections;
+
+public struct AIProfile
+{
+    public int avatarIndex;
+    public string name;
+}
 public class GameManager : MonoBehaviour, ICardOwner
 {
     [Header("Card Data")]
@@ -10,6 +16,8 @@ public class GameManager : MonoBehaviour, ICardOwner
     [Header("UI Players")]
     public UIPlayer[] uiPlayers; // Size = 4
     private AIMemory aiMemory = new AIMemory();
+    [Header("Avatar Sprites")]
+public Sprite[] avatarSprites;
 
 
     [Header("Deck Visual")]
@@ -35,6 +43,7 @@ public class GameManager : MonoBehaviour, ICardOwner
     private int selectedRank = -1;
     // ⭐ remembers the rank that was asked before Go Fish
     private int lastAskedRank = -1;
+    private int bookOrderCounter = 0;
 
     private bool waitingForTarget = false;
     private bool waitingForDeckClick = false;
@@ -50,6 +59,21 @@ public class GameManager : MonoBehaviour, ICardOwner
     private bool gameOver = false;
     private bool lockTargetSelection = false;
     public ToastUI toastUI;
+    // 🔥 Player names pool (10 names)
+    [SerializeField]
+    private AIProfile[] aiProfiles = new AIProfile[]
+{
+    new AIProfile { name = "Lob", avatarIndex = 0 },
+    new AIProfile { name = "Alex", avatarIndex = 1 },
+    new AIProfile { name = "Johna", avatarIndex = 2 },
+    new AIProfile { name = "Emma", avatarIndex = 3 },
+    new AIProfile { name = "Ava", avatarIndex = 4 },
+    new AIProfile { name = "Soph", avatarIndex = 5 },
+    new AIProfile { name = "Liam", avatarIndex = 6 },
+    new AIProfile { name = "Olivi", avatarIndex = 7 },
+    new AIProfile { name = "Noah", avatarIndex = 8 },
+    new AIProfile { name = "David", avatarIndex = 9 }
+};
     // ⭐ tracks if the last deck card was drawn
     // private bool lastDeckCardDrawn = false;
 
@@ -106,10 +130,31 @@ public class GameManager : MonoBehaviour, ICardOwner
         // 2️⃣ Create ALL 4 players (fixed positions)
         players = new Player[4];
 
-        players[0] = new Player(0, "You", true);        // Bottom
-        players[1] = new Player(1, "AI Left", false);   // Left
-        players[2] = new Player(2, "AI Top", false);    // Top
-        players[3] = new Player(3, "AI Right", false);  // Right
+        // shuffle names (simple random pick)
+        List<AIProfile> shuffledProfiles = new List<AIProfile>(aiProfiles);
+
+        for (int i = 0; i < shuffledProfiles.Count; i++)
+        {
+            AIProfile temp = shuffledProfiles[i];
+            int rand = Random.Range(i, shuffledProfiles.Count);
+            shuffledProfiles[i] = shuffledProfiles[rand];
+            shuffledProfiles[rand] = temp;
+        }
+
+        players[0] = new Player(0, "You", true, 0);
+
+        players[1] = new Player(1, shuffledProfiles[1].name, false, shuffledProfiles[1].avatarIndex);
+        players[2] = new Player(2, shuffledProfiles[2].name, false, shuffledProfiles[2].avatarIndex);
+        players[3] = new Player(3, shuffledProfiles[3].name, false, shuffledProfiles[3].avatarIndex);
+        Debug.Log("AI1: " + players[1].PlayerName + " avatar: " + players[1].AvatarIndex);
+        Debug.Log("AI2: " + players[2].PlayerName + " avatar: " + players[2].AvatarIndex);
+        Debug.Log("AI3: " + players[3].PlayerName + " avatar: " + players[3].AvatarIndex);
+        bookOrderCounter = 0;
+
+        foreach (var p in players)
+        {
+            p.LastBookTurn = int.MaxValue;
+        }
 
         // 3️⃣ Select mode
         int count = ModeSelectionController.selectedPlayers;
@@ -423,7 +468,11 @@ public class GameManager : MonoBehaviour, ICardOwner
         currentTargetUI = uiPlayers[targetUIIndex];
 
         int currentUIIndex = GetUIIndex(currentPlayer);
-        uiPlayers[currentUIIndex].ShowAskPopup(players[randomTarget].PlayerName, selectedRank);
+        string displayName = players[randomTarget].IsHuman
+     ? ProfileData.PlayerName
+     : players[randomTarget].PlayerName;
+
+        uiPlayers[currentUIIndex].ShowAskPopup(displayName, selectedRank);
 
         Debug.Log("AI asking " + players[randomTarget].PlayerName +
                   " for rank " + selectedRank);
@@ -569,7 +618,11 @@ public class GameManager : MonoBehaviour, ICardOwner
         askedRankTargetThisTurn.Add(key);
 
         int currentUIIndex = GetUIIndex(currentPlayer);
-        uiPlayers[currentUIIndex].ShowAskPopup(players[targetID].PlayerName, selectedRank);
+        string displayName = players[targetID].IsHuman
+    ? ProfileData.PlayerName
+    : players[targetID].PlayerName;
+
+        uiPlayers[currentUIIndex].ShowAskPopup(displayName, selectedRank);
         currentTargetUI.ShowTargetPopup();
         turnActionRunning = true;
 
@@ -1113,6 +1166,9 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
 
         player.AddPoint();
+        // ⭐ TRACK BOOK ORDER
+        player.LastBookTurn = bookOrderCounter;
+        bookOrderCounter++;
         // ⭐ TOAST — BOOK COMPLETED
         if (toastUI != null)
         {

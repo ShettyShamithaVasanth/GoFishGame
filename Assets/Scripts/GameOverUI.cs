@@ -22,9 +22,10 @@ public class GameOverUI : MonoBehaviour
 
         // sort players by score (highest first)
         var sortedPlayers = players
-            .OrderByDescending(p => p.Score)
-            .Take(activePlayers)   // ⭐ only keep active players
-            .ToArray();
+    .OrderByDescending(p => p.Score)          // ⭐ main: score
+    .ThenBy(p => p.LastBookTurn)              // ⭐ tie-break: earlier book wins
+    .Take(activePlayers)
+    .ToArray();
 
         // first hide all rows
         for (int i = 0; i < playerNames.Length; i++)
@@ -40,8 +41,12 @@ public class GameOverUI : MonoBehaviour
             playerNames[i].text = sortedPlayers[i].PlayerName;
             playerScores[i].text = "Score: " + sortedPlayers[i].Score;
 
-            int id = sortedPlayers[i].PlayerID;
-            playerAvatarImages[i].sprite = avatarSprites[id];
+            int avatarIndex = sortedPlayers[i].AvatarIndex;
+
+            if (avatarIndex >= 0 && avatarIndex < avatarSprites.Length)
+            {
+                playerAvatarImages[i].sprite = avatarSprites[avatarIndex];
+            }
 
             if (sortedPlayers[i].IsHuman)
             {

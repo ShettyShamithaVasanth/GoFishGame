@@ -39,7 +39,34 @@ public class UIPlayer : MonoBehaviour, ICardOwner
     {
 
         playerInstance = player;
-        nameLabel.text = player.PlayerName;
+        // 🔥 HUMAN PLAYER USES PROFILE DATA
+        if (player.IsHuman)
+        {
+            nameLabel.text = ProfileData.PlayerName;
+
+            if (ProfileData.PlayerAvatar != null && profilePhoto != null)
+            {
+                profilePhoto.sprite = ProfileData.PlayerAvatar;
+            }
+        }
+        else
+        {
+            nameLabel.text = player.PlayerName;
+
+            if (profilePhoto != null)
+            {
+                GameManager gm = FindFirstObjectByType<GameManager>();
+
+                if (gm != null &&
+                    player.AvatarIndex >= 0 &&
+                    player.AvatarIndex < gm.avatarSprites.Length)
+                {
+                    profilePhoto.sprite = gm.avatarSprites[player.AvatarIndex];
+                }
+            }
+            Debug.Log("SETTING AVATAR: " + player.PlayerName + " index: " + player.AvatarIndex);
+
+        }
         // Subscribe to turn event
         playerInstance.OnTurnChanged += HandleTurnChanged;
         StopTurnAnimation();

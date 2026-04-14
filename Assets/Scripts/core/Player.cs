@@ -7,15 +7,18 @@ public class Player
     public string PlayerName;
     public bool IsHuman;
     public Hand PlayerHand;
+    public int AvatarIndex;
     public int Score { get; private set; } = 0;
+    public int LastBookTurn = int.MaxValue;
 
     public bool IsMyTurn { get; private set; }
 
-    public Player(int id, string name, bool isHuman)
+    public Player(int id, string name, bool isHuman, int avatarIndex = 0)
     {
         PlayerID = id;
         PlayerName = name;
         IsHuman = isHuman;
+        AvatarIndex = avatarIndex;
         PlayerHand = new Hand();
     }
     public event System.Action<Player, bool> OnTurnChanged;

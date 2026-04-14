@@ -79,5 +79,6 @@ public class ModeSelectionController : MonoBehaviour
             p.canInteract = true;
 
         gameSceneUI.ShowPanel();
+        Debug.Log("Game started. UI Players can now interact.");
     }
 }
