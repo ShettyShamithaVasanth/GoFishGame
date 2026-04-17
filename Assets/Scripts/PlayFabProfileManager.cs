@@ -16,10 +16,14 @@ public class PlayFabProfileManager : MonoBehaviour
     public void SaveProfile(string name, int avatarIndex)
     {
         var data = new Dictionary<string, string>()
-        {
-            { "PlayerName", name },
-            { "AvatarIndex", avatarIndex.ToString() }
-        };
+{
+    { "PlayerName", name },
+    { "AvatarIndex", avatarIndex.ToString() },
+
+    // ⭐ NEW STATS
+    { "GamesPlayed", ProfileData.GamesPlayed.ToString() },
+    { "GamesWon", ProfileData.GamesWon.ToString() }
+};
 
         var request = new UpdateUserDataRequest
         {
@@ -34,11 +38,22 @@ public class PlayFabProfileManager : MonoBehaviour
     // 🔥 LOAD PROFILE FROM CLOUD
     public void LoadProfile()
     {
+        if (!PlayFabClientAPI.IsClientLoggedIn())
+        {
+            Debug.LogWarning("⚠️ Not logged in yet. Skipping LoadProfile.");
+            return;
+        }
         PlayFabClientAPI.GetUserData(new GetUserDataRequest(),
         result =>
         {
             if (result.Data != null && result.Data.ContainsKey("PlayerName"))
             {
+                // ⭐ LOAD STATS (SAFE CHECK)
+                if (result.Data.ContainsKey("GamesPlayed"))
+                    ProfileData.GamesPlayed = int.Parse(result.Data["GamesPlayed"].Value);
+
+                if (result.Data.ContainsKey("GamesWon"))
+                    ProfileData.GamesWon = int.Parse(result.Data["GamesWon"].Value);
                 string name = result.Data["PlayerName"].Value;
                 int avatarIndex = int.Parse(result.Data["AvatarIndex"].Value);
 
@@ -58,11 +73,7 @@ public class PlayFabProfileManager : MonoBehaviour
                 // 🔥 UPDATE UI
                 if (menu != null)
                 {
-                    if (menu.topProfileName != null)
-                        menu.topProfileName.text = name;
-
-                    if (menu.topProfileAvatar != null && ProfileData.PlayerAvatar != null)
-                        menu.topProfileAvatar.sprite = ProfileData.PlayerAvatar;
+                    menu.UpdateUI(); // ⭐ SINGLE SOURCE UPDATE
                 }
             }
             else
@@ -71,5 +82,6 @@ public class PlayFabProfileManager : MonoBehaviour
             }
         },
         error => Debug.LogError("❌ Cloud Load FAILED"));
+
     }
 }

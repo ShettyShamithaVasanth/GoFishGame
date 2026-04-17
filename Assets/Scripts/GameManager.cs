@@ -17,7 +17,7 @@ public class GameManager : MonoBehaviour, ICardOwner
     public UIPlayer[] uiPlayers; // Size = 4
     private AIMemory aiMemory = new AIMemory();
     [Header("Avatar Sprites")]
-public Sprite[] avatarSprites;
+    public Sprite[] avatarSprites;
 
 
     [Header("Deck Visual")]
@@ -141,11 +141,22 @@ public Sprite[] avatarSprites;
             shuffledProfiles[rand] = temp;
         }
 
-        players[0] = new Player(0, "You", true, 0);
+        int savedAvatarIndex = ProfileSaveSystem.LoadAvatarIndex();
 
+        players[0] = new Player(0, ProfileData.PlayerName, true, savedAvatarIndex);
         players[1] = new Player(1, shuffledProfiles[1].name, false, shuffledProfiles[1].avatarIndex);
         players[2] = new Player(2, shuffledProfiles[2].name, false, shuffledProfiles[2].avatarIndex);
         players[3] = new Player(3, shuffledProfiles[3].name, false, shuffledProfiles[3].avatarIndex);
+        int humanAvatar = savedAvatarIndex;
+
+        foreach (var p in players)
+        {
+            if (!p.IsHuman && p.AvatarIndex == humanAvatar)
+            {
+                p.AvatarIndex = (p.AvatarIndex + 1) % avatarSprites.Length;
+            }
+        }
+
         Debug.Log("AI1: " + players[1].PlayerName + " avatar: " + players[1].AvatarIndex);
         Debug.Log("AI2: " + players[2].PlayerName + " avatar: " + players[2].AvatarIndex);
         Debug.Log("AI3: " + players[3].PlayerName + " avatar: " + players[3].AvatarIndex);
@@ -1216,6 +1227,8 @@ public Sprite[] avatarSprites;
             return;
 
         gameOver = true;
+        // ⭐ STEP 1 — INCREASE GAMES PLAYED
+        ProfileData.GamesPlayed++;
 
         Debug.Log("GAME OVER TRIGGERED");
 
@@ -1230,6 +1243,32 @@ public Sprite[] avatarSprites;
         {
             ui.canInteract = false;
         }
+        // ⭐ STEP 2 — FIND WINNER
+        Player winner = players[0];
+
+        foreach (Player p in players)
+        {
+            if (p.Score > winner.Score)
+            {
+                winner = p;
+            }
+        }
+
+        // ⭐ STEP 3 — IF HUMAN WON → INCREASE
+        if (winner.IsHuman)
+        {
+            Debug.Log("Human WON!");
+            ProfileData.GamesWon++;
+        }
+        else
+        {
+            Debug.Log("AI WON!");
+        }
+        // ⭐ STEP 4 — SAVE TO CLOUD
+        PlayFabProfileManager.Instance.SaveProfile(
+            ProfileData.PlayerName,
+            ProfileSaveSystem.LoadAvatarIndex()
+        );
         gameOverUI.ShowGameOver(players);
     }
 

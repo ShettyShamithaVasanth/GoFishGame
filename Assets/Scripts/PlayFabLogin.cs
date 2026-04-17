@@ -25,6 +25,11 @@ public class PlayFabLogin : MonoBehaviour
     {
         Debug.Log("✅ PlayFab Login SUCCESS");
 
+        // ⭐ STORE PLAYFAB ID
+        ProfileData.PlayFabID = result.PlayFabId;
+
+        Debug.Log("PlayFab ID: " + ProfileData.PlayFabID);
+
         // 🔥 LOAD CLOUD DATA AFTER LOGIN
         PlayFabProfileManager.Instance.LoadProfile();
     }

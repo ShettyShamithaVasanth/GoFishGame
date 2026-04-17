@@ -12,6 +12,9 @@ public class MainMenuProfileController : MonoBehaviour
     public List<Image> avatarImages; // all avatars (same list as edit panel)
     public Image topProfileAvatar;
     public TextMeshProUGUI topProfileName;
+    public TextMeshProUGUI profileIDText;
+    public TextMeshProUGUI gamesPlayedText;
+    public TextMeshProUGUI gamesWonText;
 
     void Start()
     {
@@ -19,27 +22,38 @@ public class MainMenuProfileController : MonoBehaviour
     }
     void LoadProfile()
     {
-        // 🔥 GET SAVED DATA
+        // 🔥 LOAD LOCAL FIRST (FAST)
         string savedName = ProfileSaveSystem.LoadName();
         int avatarIndex = ProfileSaveSystem.LoadAvatarIndex();
 
-        // 🔥 STORE INTO GLOBAL DATA
         ProfileData.PlayerName = savedName;
 
-        // 🔥 GET AVATAR FROM LIST
         if (avatarImages != null && avatarImages.Count > avatarIndex)
         {
             ProfileData.PlayerAvatar = avatarImages[avatarIndex].sprite;
         }
 
-        // 🔥 UPDATE UI (TOP BAR)
+        // 🔥 UPDATE UI IMMEDIATELY
+        UpdateUI();
+
+        // 🔥 THEN LOAD CLOUD (IMPORTANT)
+        // PlayFabProfileManager.Instance.LoadProfile();
+    }
+
+    public void UpdateUI()
+    {
         if (topProfileName != null)
-            topProfileName.text = savedName;
+            topProfileName.text = ProfileData.PlayerName;
 
         if (topProfileAvatar != null && ProfileData.PlayerAvatar != null)
             topProfileAvatar.sprite = ProfileData.PlayerAvatar;
 
-        Debug.Log("Profile Loaded Successfully");
+        // ⭐ ALSO UPDATE STATS PANEL
+        if (statsNameText != null)
+            statsNameText.text = ProfileData.PlayerName;
+
+        if (statsAvatarImage != null && ProfileData.PlayerAvatar != null)
+            statsAvatarImage.sprite = ProfileData.PlayerAvatar;
     }
 
     // 🔥 OPEN STATS PANEL
@@ -50,9 +64,19 @@ public class MainMenuProfileController : MonoBehaviour
         if (statsPanel != null)
             statsPanel.SetActive(true);
 
-        // 🔥 HIDE MENU BACKGROUND
         if (menuBackground != null)
             menuBackground.SetActive(false);
+
+        // ⭐ SET PROFILE ID
+        if (profileIDText != null)
+            profileIDText.text = "Profile ID: " + ProfileData.PlayFabID;
+
+        // ⭐ UPDATE STATS UI
+        if (gamesPlayedText != null)
+            gamesPlayedText.text = ProfileData.GamesPlayed.ToString();
+
+        if (gamesWonText != null)
+            gamesWonText.text = ProfileData.GamesWon.ToString();
     }
 
     // 🔥 CLOSE STATS PANEL

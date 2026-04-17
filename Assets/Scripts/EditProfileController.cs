@@ -105,5 +105,12 @@ public class EditProfileController : MonoBehaviour
         // 🔥 GO BACK TO MENU
         statsPanel.SetActive(false);
         menuBackground.SetActive(true);
+
+        // ⭐ FORCE UI REFRESH AFTER SAVE
+        var menu = FindFirstObjectByType<MainMenuProfileController>();
+        if (menu != null)
+        {
+            menu.UpdateUI();
+        }
     }
 }
