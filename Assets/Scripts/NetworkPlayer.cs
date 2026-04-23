@@ -7,6 +7,8 @@ public class NetworkPlayer : NetworkBehaviour
 {
     public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
     public List<int> hand = new List<int>();
+    public NetworkVariable<int> score = new NetworkVariable<int>(0);
+    public List<int> completedBooks = new List<int>();
 
     public override void OnNetworkSpawn()
     {

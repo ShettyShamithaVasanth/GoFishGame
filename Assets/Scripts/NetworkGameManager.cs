@@ -213,8 +213,20 @@ public class NetworkGameManager : NetworkBehaviour
                 int rank = kvp.Key;
                 Debug.Log($"BOOK CREATED! Player {player.OwnerClientId} completed rank {rank}");
                 player.hand.RemoveAll(c => c == rank);
-                // Later: increase score
+                // score book
+                player.completedBooks.Add(rank);
+                // update score
+                player.score.Value++;
+                Debug.Log($"Player {player.OwnerClientId} scored :{player.score.Value} ");
+                // Notify all clients
+                BookCreatedClientRpc(player.OwnerClientId, rank, player.score.Value);
             }
         }
+    }
+    [ClientRpc]
+    void BookCreatedClientRpc(ulong playerId, int rank, int score)
+    {
+        Debug.Log($"[ClientRpc] Player {playerId} completed book of rank {rank} | Score: {score}");
+        // Update UI or other client-side elements here
     }
 }
