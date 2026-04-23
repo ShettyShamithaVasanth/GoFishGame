@@ -32,6 +32,7 @@ public class GameOverUI : MonoBehaviour
         {
             playerNames[i].transform.parent.gameObject.SetActive(false);
         }
+        Debug.Log("=== GAME OVER UI SORTED PLAYERS ===");
 
         // now show only required rows
         for (int i = 0; i < sortedPlayers.Length; i++)
@@ -40,6 +41,11 @@ public class GameOverUI : MonoBehaviour
 
             playerNames[i].text = sortedPlayers[i].PlayerName;
             playerScores[i].text = "Score: " + sortedPlayers[i].Score;
+            Debug.Log("UI Slot: " + i +
+          " | PlayerID: " + sortedPlayers[i].PlayerID +
+          " | Name: " + sortedPlayers[i].PlayerName +
+          " | AvatarIndex: " + sortedPlayers[i].AvatarIndex +
+          " | Score: " + sortedPlayers[i].Score);
 
             int avatarIndex = sortedPlayers[i].AvatarIndex;
 

@@ -156,6 +156,18 @@ public class GameManager : MonoBehaviour, ICardOwner
                 p.AvatarIndex = (p.AvatarIndex + 1) % avatarSprites.Length;
             }
         }
+        // ⭐ DEBUG PRINT — PLAYER AVATAR MAPPING (START)
+        Debug.Log("=== GAME START PLAYER AVATAR DATA ===");
+
+        foreach (Player p in players)
+        {
+            Debug.Log("PlayerID: " + p.PlayerID +
+                      " | Name: " + p.PlayerName +
+                      " | AvatarIndex: " + p.AvatarIndex +
+                      " | IsHuman: " + p.IsHuman);
+        }
+
+        Debug.Log("====================================");
 
         Debug.Log("AI1: " + players[1].PlayerName + " avatar: " + players[1].AvatarIndex);
         Debug.Log("AI2: " + players[2].PlayerName + " avatar: " + players[2].AvatarIndex);
@@ -1231,6 +1243,19 @@ public class GameManager : MonoBehaviour, ICardOwner
         ProfileData.GamesPlayed++;
 
         Debug.Log("GAME OVER TRIGGERED");
+        // ⭐ DEBUG PRINT — PLAYER AVATAR MAPPING (END)
+        Debug.Log("=== GAME END PLAYER AVATAR DATA ===");
+
+        foreach (Player p in players)
+        {
+            Debug.Log("PlayerID: " + p.PlayerID +
+                      " | Name: " + p.PlayerName +
+                      " | AvatarIndex: " + p.AvatarIndex +
+                      " | Score: " + p.Score +
+                      " | IsHuman: " + p.IsHuman);
+        }
+
+        Debug.Log("==================================");
 
         CancelInvoke();       // stop AI invokes
         StopAllCoroutines();  // ⭐ stop animations immediately
