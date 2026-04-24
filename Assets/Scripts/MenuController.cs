@@ -2,6 +2,9 @@ using UnityEngine;
 using System.Collections;
 using Unity.VectorGraphics;
 using UnityEngine.SceneManagement;
+using TMPro;
+using UnityEditor;
+using PlayFab.MultiplayerModels;
 
 public class MenuController : MonoBehaviour
 {
@@ -17,6 +20,8 @@ public class MenuController : MonoBehaviour
     public GameObject LeftPlayer;
     public GameObject RightPlayer;
     public GameObject DeckPosition;
+    public GameObject FriendsPanel;
+    public TMP_InputField roomCodeInput;
 
     void Start()
     {
@@ -74,7 +79,15 @@ public class MenuController : MonoBehaviour
 
     public void PlayWithFriends()
     {
-        Debug.Log("Play with Friends not implemented yet.");
+        Debug.Log("Play with Friends clicked.");
+        MenuUI.SetActive(false);
+        FriendsPanel.SetActive(true);
+    }
+
+    public void CloseFriendsPanel()
+    {
+        FriendsPanel.SetActive(false);
+        MenuUI.SetActive(true);
     }
     public void ContinueGame()
     {
@@ -125,6 +138,17 @@ public class MenuController : MonoBehaviour
         {
             gameSceneUI.ShowPanel();
         }
+    }
+
+    public void JoinRoom()
+    {
+        string code = roomCodeInput.text;
+        if (string.IsNullOrEmpty(code))
+        {
+            Debug.Log("Please enter a room code to join.");
+            return;
+        }
+        LobbyManager.Instance.JoinLobby(code);
     }
 
 
