@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections;
+using Unity.VectorGraphics;
+using UnityEngine.SceneManagement;
 
 public class MenuController : MonoBehaviour
 {
@@ -63,7 +65,11 @@ public class MenuController : MonoBehaviour
     // ⭐ not implemented modes
     public void PlayOnline()
     {
-        Debug.Log("Online mode not implemented yet.");
+        Debug.Log("play Online mode.");
+        // set mode
+        GameModeManager.isOnlineMode = true;
+        // load matchmaking scene
+        SceneManager.LoadScene("GameScene");
     }
 
     public void PlayWithFriends()
@@ -71,55 +77,55 @@ public class MenuController : MonoBehaviour
         Debug.Log("Play with Friends not implemented yet.");
     }
     public void ContinueGame()
-{
-    ModeSelectionPanel.SetActive(false);
-
-    int players = ModeSelectionController.selectedPlayers;
-
-    // Hide all first
-    TopPlayer.SetActive(false);
-    BottomPlayer.SetActive(false);
-    LeftPlayer.SetActive(false);
-    RightPlayer.SetActive(false);
-
-    // ⭐ Enable players based on selection
-
-    if (players == 2)
     {
-        // Human vs Top AI
-        BottomPlayer.SetActive(true);
-        TopPlayer.SetActive(true);
-    }
-    else if (players == 3)
-    {
-        // Human + Left + Right
-        BottomPlayer.SetActive(true);
-        LeftPlayer.SetActive(true);
-        RightPlayer.SetActive(true);
-    }
-    else if (players == 4)
-    {
-        // All players
-        BottomPlayer.SetActive(true);
-        TopPlayer.SetActive(true);
-        LeftPlayer.SetActive(true);
-        RightPlayer.SetActive(true);
-    }
+        ModeSelectionPanel.SetActive(false);
 
-    DeckPosition.SetActive(true);
+        int players = ModeSelectionController.selectedPlayers;
 
-    GameManager.SetActive(true);
+        // Hide all first
+        TopPlayer.SetActive(false);
+        BottomPlayer.SetActive(false);
+        LeftPlayer.SetActive(false);
+        RightPlayer.SetActive(false);
 
-    foreach (UIPlayer p in uiPlayers)
-    {
-        p.canInteract = true;
+        // ⭐ Enable players based on selection
+
+        if (players == 2)
+        {
+            // Human vs Top AI
+            BottomPlayer.SetActive(true);
+            TopPlayer.SetActive(true);
+        }
+        else if (players == 3)
+        {
+            // Human + Left + Right
+            BottomPlayer.SetActive(true);
+            LeftPlayer.SetActive(true);
+            RightPlayer.SetActive(true);
+        }
+        else if (players == 4)
+        {
+            // All players
+            BottomPlayer.SetActive(true);
+            TopPlayer.SetActive(true);
+            LeftPlayer.SetActive(true);
+            RightPlayer.SetActive(true);
+        }
+
+        DeckPosition.SetActive(true);
+
+        GameManager.SetActive(true);
+
+        foreach (UIPlayer p in uiPlayers)
+        {
+            p.canInteract = true;
+        }
+
+        if (gameSceneUI != null)
+        {
+            gameSceneUI.ShowPanel();
+        }
     }
-
-    if (gameSceneUI != null)
-    {
-        gameSceneUI.ShowPanel();
-    }
-}
 
 
 }
