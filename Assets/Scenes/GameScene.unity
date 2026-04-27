@@ -1906,8 +1906,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 65ecc171961c3dc41ade5d31bee72add, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProfileUI
-  avatarImage: {fileID: 1014590558}
-  nameText: {fileID: 1726997970}
+  avatarImage: {fileID: 1047908728}
+  nameText: {fileID: 1592787392}
 --- !u!1 &148811820
 GameObject:
   m_ObjectHideFlags: 0
@@ -21451,7 +21451,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: You
+  m_text: you
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 061d4ceb3dd5dc74f91c264ddc10b55f, type: 2}
   m_sharedMaterial: {fileID: 4589053775106469827, guid: 061d4ceb3dd5dc74f91c264ddc10b55f, type: 2}

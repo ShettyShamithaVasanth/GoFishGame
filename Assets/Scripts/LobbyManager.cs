@@ -24,11 +24,45 @@ public class LobbyManager : MonoBehaviour
     public TMPro.TextMeshProUGUI roomCodeText;
 
     Lobby currentLobby;
+    float polltimer = 0f;
+    float pollInterval = 2f;
 
     void Awake()
     {
         Instance = this;
     }
+
+    void Update()
+    {
+        // only run if lobby exists
+        if (currentLobby == null)
+            return;
+        polltimer += Time.deltaTime;
+        if (polltimer > pollInterval)
+        {
+            polltimer = 0f;
+            _ = RefreshLobby();
+        }
+    }
+
+    async Task RefreshLobby()
+    {
+        try
+        {
+            //Ask server for latest lobby data
+            currentLobby = await LobbyService.Instance.GetLobbyAsync(currentLobby.Id);
+            //Print how many players are inside
+            Debug.Log("Players in lobby: " + currentLobby.Players.Count);
+            //Update UI (we will build this next step)
+            UpdatePlayerSlotsUI();
+        }
+        catch
+        {
+            //If something fails (internet, lobby closed, etc.)
+            Debug.Log("Lobby refresh failed");
+        }
+    }
+
 
     // / CREATE ROOM (HOST)
     public async void CreateLobby()
@@ -62,24 +96,35 @@ public class LobbyManager : MonoBehaviour
         creatingRoomPanel.SetActive(false);
         lobbyPanel.SetActive(true);
 
-        //Show room code
-        roomCodeText.text = "Room Code: " + currentLobby.Id.Substring(0, 4);
         //Set YOUR PLAYER UI
         SetMyPlayerUI();
+        //Show room code
+        roomCodeText.text = "Room Code: " + currentLobby.Id.Substring(0, 4);
         //Start Host
         // NetworkManager.Singleton.StartHost();
     }
 
     void SetMyPlayerUI()
     {
+        Debug.Log("Setting MY Player UI...");
         string playerName = ProfileData.PlayerName;
         Sprite avatar = ProfileData.PlayerAvatar;
+        Debug.Log("Name:"+ProfileData.PlayerName+", Avatar:"+ProfileData.PlayerAvatar);
+
+        //SAFETY FIXES
         if (string.IsNullOrEmpty(playerName))
             playerName = "Player";
+        if (avatar == null)
+            Debug.LogWarning("Avatar is NULL → check ProfileData");
 
-        if (playerSlots != null && playerSlots.Length > 0)
+        //APPLY TO SLOT 0
+        if (playerSlots != null && playerSlots.Length > 0 && playerSlots[0] != null)
         {
             playerSlots[0].SetProfile(playerName, avatar);
+        }
+        else
+        {
+            Debug.LogError("PlayerSlots[0] not assigned!");
         }
     }
 
@@ -223,6 +268,35 @@ public class LobbyManager : MonoBehaviour
             {
                 Startbtn.interactable = false;
             }
+        }
+    }
+
+    void UpdatePlayerSlotsUI()
+    {
+        //Safety check (important)
+        if (playerSlots == null) return;
+        //STEP A — Clear all slots except Player_0
+        for (int i = 1; i < playerSlots.Length; i++)
+        {
+            playerSlots[i].SetProfile("Waiting...", null);
+        }
+
+        //STEP B — Fill slots with real players
+        for (int i = 1; i < currentLobby.Players.Count; i++)
+        {
+            // safety (avoid crash)
+            if (i >= playerSlots.Length) break;
+            var player = currentLobby.Players[i];
+            string name = "Player";
+
+            //Get player name from lobby data
+            if (player.Data != null && player.Data.ContainsKey("name"))
+            {
+                name = player.Data["name"].Value;
+            }
+
+            //Set UI
+            playerSlots[i].SetProfile(name, null);
         }
     }
 }
