@@ -49,8 +49,18 @@ public class NetworkGameManager : NetworkBehaviour
     // }
     // System.Collections.IEnumerator StartGameWithDelay()
     // {
-    //     yield return new WaitForSeconds(1f); // wait for players
-    //     Debug.Log("Players ready: " + NetworkPlayerManager.Instance.players.Count);
+    //     yield return new WaitForSeconds(1f);
+
+    //     var players = NetworkPlayerManager.Instance.players;
+
+    //     if (players.Count < 2)
+    //     {
+    //         Debug.Log("Waiting for more players...");
+    //         yield break;
+    //     }
+
+    //     Debug.Log("Starting Game Automatically");
+
     //     DealCardsToPlayers();
     //     SetFirstTurn();
     //     isGameStarted.Value = true;
