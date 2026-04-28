@@ -71,6 +71,19 @@ public class LobbyManager : MonoBehaviour
         creatingRoomPanel.SetActive(true);
         //Create lobby
         currentLobby = await LobbyService.Instance.CreateLobbyAsync("My Room", 4);
+
+        await LobbyService.Instance.UpdatePlayerAsync(currentLobby.Id,
+        Unity.Services.Authentication.AuthenticationService.Instance.PlayerId, new UpdatePlayerOptions
+        {
+            Data = new Dictionary<string, PlayerDataObject>
+            {
+                {
+                    "name",new PlayerDataObject(
+                    PlayerDataObject.VisibilityOptions.Member,
+                    ProfileData.PlayerName)
+                }
+            }
+        });
         Debug.Log("Lobby Created: " + currentLobby.Id);
 
         //Create Relay
@@ -97,42 +110,56 @@ public class LobbyManager : MonoBehaviour
         lobbyPanel.SetActive(true);
 
         //Set YOUR PLAYER UI
-        SetMyPlayerUI();
+        // SetMyPlayerUI();
         //Show room code
-        roomCodeText.text = "Room Code: " + currentLobby.Id.Substring(0, 4);
+        roomCodeText.text = "Room Code: " + currentLobby.LobbyCode;
         //Start Host
         // NetworkManager.Singleton.StartHost();
     }
 
-    void SetMyPlayerUI()
-    {
-        Debug.Log("Setting MY Player UI...");
-        string playerName = ProfileData.PlayerName;
-        Sprite avatar = ProfileData.PlayerAvatar;
-        Debug.Log("Name:"+ProfileData.PlayerName+", Avatar:"+ProfileData.PlayerAvatar);
+    // void SetMyPlayerUI()
+    // {
+    //     Debug.Log("Setting MY Player UI...");
+    //     string playerName = ProfileData.PlayerName;
+    //     Sprite avatar = ProfileData.PlayerAvatar;
+    //     Debug.Log("Name:" + ProfileData.PlayerName + ", Avatar:" + ProfileData.PlayerAvatar);
 
-        //SAFETY FIXES
-        if (string.IsNullOrEmpty(playerName))
-            playerName = "Player";
-        if (avatar == null)
-            Debug.LogWarning("Avatar is NULL → check ProfileData");
+    //     //SAFETY FIXES
+    //     if (string.IsNullOrEmpty(playerName))
+    //         playerName = "Player";
+    //     if (avatar == null)
+    //         Debug.LogWarning("Avatar is NULL → check ProfileData");
 
-        //APPLY TO SLOT 0
-        if (playerSlots != null && playerSlots.Length > 0 && playerSlots[0] != null)
-        {
-            playerSlots[0].SetProfile(playerName, avatar);
-        }
-        else
-        {
-            Debug.LogError("PlayerSlots[0] not assigned!");
-        }
-    }
+    //     //APPLY TO SLOT 0
+    //     if (playerSlots != null && playerSlots.Length > 0 && playerSlots[0] != null)
+    //     {
+    //         playerSlots[0].SetProfile(playerName, avatar);
+    //     }
+    //     else
+    //     {
+    //         Debug.LogError("PlayerSlots[0] not assigned!");
+    //     }
+    // }
 
     //JOIN ROOM WITH CODE
     public async void JoinLobby(string code)
     {
+        code = code.Trim().ToUpper();
         Debug.Log("Joining Lobby with code: " + code);
         currentLobby = await LobbyService.Instance.JoinLobbyByCodeAsync(code);
+
+        await LobbyService.Instance.UpdatePlayerAsync(currentLobby.Id,
+        Unity.Services.Authentication.AuthenticationService.Instance.PlayerId, new UpdatePlayerOptions
+        {
+            Data = new Dictionary<string, PlayerDataObject>
+            {
+                {
+                    "name",new PlayerDataObject(
+                    PlayerDataObject.VisibilityOptions.Member,
+                    ProfileData.PlayerName)
+                }
+            }
+        });
         Debug.Log("Joined Lobby");
         await JoinRelay();
     }
@@ -276,13 +303,13 @@ public class LobbyManager : MonoBehaviour
         //Safety check (important)
         if (playerSlots == null) return;
         //STEP A — Clear all slots except Player_0
-        for (int i = 1; i < playerSlots.Length; i++)
+        for (int i = 0; i < playerSlots.Length; i++)
         {
             playerSlots[i].SetProfile("Waiting...", null);
         }
 
         //STEP B — Fill slots with real players
-        for (int i = 1; i < currentLobby.Players.Count; i++)
+        for (int i = 0; i < currentLobby.Players.Count; i++)
         {
             // safety (avoid crash)
             if (i >= playerSlots.Length) break;
@@ -297,6 +324,7 @@ public class LobbyManager : MonoBehaviour
 
             //Set UI
             playerSlots[i].SetProfile(name, null);
+            Debug.Log($"Slot{i}->{name}");
         }
     }
 }
