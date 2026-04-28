@@ -7,4 +7,5 @@ public static class ProfileData
     public static int GamesWon = 0;
     public static string PlayerName = "You";
     public static Sprite PlayerAvatar = null;
+    public static int PlayerAvatarIndex;
 }

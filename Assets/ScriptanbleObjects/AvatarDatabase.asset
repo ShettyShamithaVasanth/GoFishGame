@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d218418939ed78449b7d5d3ca8ffd2e, type: 3}
+  m_Name: AvatarDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::AvatarDatabase
+  avatarSprites:
+  - {fileID: 21300000, guid: 4a6729c1a06d0dd449366d97b7105e41, type: 3}
+  - {fileID: 21300000, guid: 96e590fbd9c84ef42a0eb4f7874bc5fc, type: 3}
+  - {fileID: 21300000, guid: 3c821c2131feec24bbeb22cb1814bda2, type: 3}
+  - {fileID: 21300000, guid: 5dc353cb351fd454181730f77fbc860b, type: 3}
+  - {fileID: 21300000, guid: 7298cb187ab03a24ab267f84e8f091f3, type: 3}
+  - {fileID: 21300000, guid: 77e039303b015fa44924f50e8c6030f5, type: 3}
+  - {fileID: 21300000, guid: 7cf7aea4211ef854d90975860e20572f, type: 3}
+  - {fileID: 21300000, guid: 6c7964df3e4ab804b8f0bd1999b1acf3, type: 3}
+  - {fileID: 21300000, guid: 3b7ce94aa1f7d954898400bc9772b419, type: 3}
+  - {fileID: 21300000, guid: 8bccfdeca82cc5845a96fefd627cbe14, type: 3}

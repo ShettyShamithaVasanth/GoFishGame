@@ -22,6 +22,9 @@ public class LobbyManager : MonoBehaviour
     public GameObject modeSelectionPanel;
 
     public TMPro.TextMeshProUGUI roomCodeText;
+    public UnityEngine.UI.Button startButton;
+    public GameObject enteringGamePanel;
+    public AvatarDatabase avatarDatabase;
 
     Lobby currentLobby;
     float polltimer = 0f;
@@ -56,10 +59,9 @@ public class LobbyManager : MonoBehaviour
             //Update UI (we will build this next step)
             UpdatePlayerSlotsUI();
         }
-        catch
+        catch (System.Exception e)
         {
-            //If something fails (internet, lobby closed, etc.)
-            Debug.Log("Lobby refresh failed");
+            Debug.LogWarning("Lobby refresh failed: " + e.Message);
         }
     }
 
@@ -78,11 +80,18 @@ public class LobbyManager : MonoBehaviour
             Data = new Dictionary<string, PlayerDataObject>
             {
                 {
-                    "name",new PlayerDataObject(
+                    "name",
+                    new PlayerDataObject(
                     PlayerDataObject.VisibilityOptions.Member,
                     ProfileData.PlayerName)
+                },
+                {
+                    "avatar",
+                    new PlayerDataObject(
+                    PlayerDataObject.VisibilityOptions.Member,
+                    ProfileData.PlayerAvatarIndex.ToString())
                 }
-            }
+           }
         });
         Debug.Log("Lobby Created: " + currentLobby.Id);
 
@@ -157,10 +166,21 @@ public class LobbyManager : MonoBehaviour
                     "name",new PlayerDataObject(
                     PlayerDataObject.VisibilityOptions.Member,
                     ProfileData.PlayerName)
+                },
+                {
+                    "avatar",new PlayerDataObject(
+                    PlayerDataObject.VisibilityOptions.Member,
+                    ProfileData.PlayerAvatarIndex.ToString())
                 }
             }
         });
+
         Debug.Log("Joined Lobby");
+        //SHOW "ENTERING GAME" PANEL
+        if (enteringGamePanel != null)
+        {
+            enteringGamePanel.SetActive(true);
+        }
         await JoinRelay();
     }
 
@@ -257,46 +277,62 @@ public class LobbyManager : MonoBehaviour
         currentLobby = null;
     }
 
-
     public void StartGame()
     {
-        // if not host->do nothing
         if (!NetworkManager.Singleton.IsHost)
         {
             Debug.Log("Only host can start the game.");
             return;
         }
-        Debug.Log("Host starting the game...");
-        // hide lobby UI
+
+        Debug.Log("Host starting game with scene sync...");
+
+        //Hide lobby UI
         lobbyPanel.SetActive(false);
-        // enable game UI (TODO)
-        var menu = FindFirstObjectByType<MenuController>();
-        if (menu != null)
-        {
-            // hide menu completely
-            menu.MenuUI.SetActive(false);
-            menu.LoadingPanel.SetActive(false);
-            // start gameplay directly(like offline mode)
-            menu.ContinueGame();
-        }
-        else
-        {
-            Debug.LogError("MenuController not found in the scene.");
-        }
+        //LOAD GAME SCENE (THIS IS THE REAL FIX)
+        NetworkManager.Singleton.SceneManager.LoadScene("GameScene",
+            UnityEngine.SceneManagement.LoadSceneMode.Single);
     }
 
-    void Start()
-    {
-        if (!NetworkManager.Singleton.IsHost)
-        {
-            // disable start game button for clients
-            var Startbtn = FindFirstObjectByType<UnityEngine.UI.Button>();
-            if (Startbtn != null)
-            {
-                Startbtn.interactable = false;
-            }
-        }
-    }
+    // [Unity.Netcode.ClientRpc]
+    // void StartGameClientRpc()
+    // {
+    //     Debug.Log("Game starting on all clients...");
+    //     //hide entering panel (for clients)
+    //     if (enteringGamePanel != null)
+    //     {
+    //         enteringGamePanel.SetActive(false);
+    //     }
+
+    //     //find MenuController
+    //     var menu = FindFirstObjectByType<MenuController>();
+    //     if (menu != null)
+    //     {
+    //         //hide menu UI
+    //         menu.MenuUI.SetActive(false);
+    //         menu.LoadingPanel.SetActive(false);
+
+    //         //START GAME (same as offline)
+    //         // menu.ContinueGame();
+    //     }
+    //     else
+    //     {
+    //         Debug.LogError("MenuController not found!");
+    //     }
+    // }
+
+    // void Start()
+    // {
+    //     if (!NetworkManager.Singleton.IsHost)
+    //     {
+    //         // disable start game button for clients
+    //         var Startbtn = FindFirstObjectByType<UnityEngine.UI.Button>();
+    //         if (Startbtn != null)
+    //         {
+    //             Startbtn.interactable = false;
+    //         }
+    //     }
+    // }
 
     void UpdatePlayerSlotsUI()
     {
@@ -311,20 +347,51 @@ public class LobbyManager : MonoBehaviour
         //STEP B — Fill slots with real players
         for (int i = 0; i < currentLobby.Players.Count; i++)
         {
-            // safety (avoid crash)
             if (i >= playerSlots.Length) break;
-            var player = currentLobby.Players[i];
-            string name = "Player";
 
-            //Get player name from lobby data
+            var player = currentLobby.Players[i];
+
+            string name = "Player";
+            int avatarIndex = 0;
+            Sprite avatarSprite = null;
+
+            //GET NAME
             if (player.Data != null && player.Data.ContainsKey("name"))
             {
                 name = player.Data["name"].Value;
             }
 
-            //Set UI
-            playerSlots[i].SetProfile(name, null);
-            Debug.Log($"Slot{i}->{name}");
+            //GET AVATAR INDEX
+            if (player.Data != null && player.Data.ContainsKey("avatar"))
+            {
+                int.TryParse(player.Data["avatar"].Value, out avatarIndex);
+            }
+
+            // GET SPRITE FROM DATABASE
+            if (avatarDatabase != null &&
+                avatarDatabase.avatarSprites != null &&
+                avatarIndex < avatarDatabase.avatarSprites.Length)
+            {
+                avatarSprite = avatarDatabase.avatarSprites[avatarIndex];
+            }
+
+            // GET SPRITE FROM DATABASE
+            playerSlots[i].SetProfile(name, avatarSprite);
+
+            Debug.Log($"Slot{i} → {name}, AvatarIndex: {avatarIndex}");
+        }
+
+        // enable start button only if host band player>=2
+        if (startButton != null)
+        {
+            if (NetworkManager.Singleton.IsHost && currentLobby.Players.Count >= 2)
+            {
+                startButton.interactable = true;
+            }
+            else
+            {
+                startButton.interactable = false;
+            }
         }
     }
 }

@@ -21,7 +21,31 @@ public class NetworkGameManager : NetworkBehaviour
     {
         isGameStarted.OnValueChanged += OnGameStartedChanged;
         currentTurnPlayerId.OnValueChanged += OnTurnchanged;
+        // Start game on server
+        if (IsServer)
+        {
+            StartCoroutine(StartGameWithDelay());
+        }
     }
+
+    System.Collections.IEnumerator StartGameWithDelay()
+    {
+        Debug.Log("Waiting before starting game...");
+        yield return new WaitForSeconds(1.5f);
+        var players = NetworkPlayerManager.Instance.players;
+
+        if (players == null || players.Count < 2)
+        {
+            Debug.Log("Not enough players to start");
+            yield break;
+        }
+
+        Debug.Log("Starting Game Automatically...");
+        DealCardsToPlayers();
+        SetFirstTurn();
+        isGameStarted.Value = true;
+    }
+    
     public override void OnNetworkDespawn()
     {
         isGameStarted.OnValueChanged -= OnGameStartedChanged;
