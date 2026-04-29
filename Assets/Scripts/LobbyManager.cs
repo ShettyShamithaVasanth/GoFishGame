@@ -59,10 +59,50 @@ public class LobbyManager : MonoBehaviour
             //Update UI (we will build this next step)
             UpdatePlayerSlotsUI();
         }
-        catch (System.Exception e)
+        catch (LobbyServiceException e)
         {
             Debug.LogWarning("Lobby refresh failed: " + e.Message);
+
+            //If lobby deleted or player removed
+            if (e.Reason == LobbyExceptionReason.LobbyNotFound ||
+                e.Reason == LobbyExceptionReason.Forbidden)
+            {
+                Debug.Log("Lobby no longer exists → cleaning up");
+                HandleLobbyClosed();
+            }
         }
+    }
+
+    void HandleLobbyClosed()
+    {
+        Debug.Log("Handling lobby close...");
+
+        // STEP 1 — Remove lobby reference
+        currentLobby = null;
+
+        // STEP 2 — Stop multiplayer connection
+        if (NetworkManager.Singleton != null &&
+            NetworkManager.Singleton.IsListening)
+        {
+            NetworkManager.Singleton.Shutdown();
+            Debug.Log("Network stopped");
+        }
+
+        // STEP 3 — Hide lobby UI
+        if (lobbyPanel != null)
+            lobbyPanel.SetActive(false);
+
+        if (creatingRoomPanel != null)
+            creatingRoomPanel.SetActive(false);
+
+        // STEP 4 — Show main menu again
+        if (menuBackground != null)
+            menuBackground.SetActive(true);
+
+        // STEP 5 — Debug message (later → popup UI)
+        Debug.Log("You were removed OR host left the lobby");
+        // You can later show UI popup
+        Debug.Log("Disconnected from lobby");
     }
 
 
@@ -336,6 +376,8 @@ public class LobbyManager : MonoBehaviour
 
     void UpdatePlayerSlotsUI()
     {
+        if (currentLobby == null)
+            return;
         //Safety check (important)
         if (playerSlots == null) return;
         //STEP A — Clear all slots except Player_0
@@ -394,4 +436,6 @@ public class LobbyManager : MonoBehaviour
             }
         }
     }
+
+
 }
