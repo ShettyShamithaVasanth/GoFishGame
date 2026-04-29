@@ -31,7 +31,7 @@ public class UIPlayer : MonoBehaviour, ICardOwner
     [Header("Score")]
     public TextMeshPro scoreText;
     public bool canInteract = false;
-
+    public AvatarDatabase avatarDatabase;
     private Player playerInstance;
     private List<GameObject> spawnedCards = new List<GameObject>();
 
@@ -44,9 +44,17 @@ public class UIPlayer : MonoBehaviour, ICardOwner
         {
             nameLabel.text = ProfileData.PlayerName;
 
-            if (ProfileData.PlayerAvatar != null && profilePhoto != null)
+            if (profilePhoto != null)
             {
-                profilePhoto.sprite = ProfileData.PlayerAvatar;
+                int index = ProfileData.PlayerAvatarIndex;
+
+                if (avatarDatabase != null &&
+                    avatarDatabase.avatarSprites != null &&
+                    index >= 0 &&
+                    index < avatarDatabase.avatarSprites.Length)
+                {
+                    profilePhoto.sprite = avatarDatabase.avatarSprites[index];
+                }
             }
         }
         else
@@ -55,17 +63,22 @@ public class UIPlayer : MonoBehaviour, ICardOwner
 
             if (profilePhoto != null)
             {
-                GameManager gm = FindFirstObjectByType<GameManager>();
+                NetworkPlayer netPlayer = GetComponent<NetworkPlayer>();
 
-                if (gm != null &&
-                    player.AvatarIndex >= 0 &&
-                    player.AvatarIndex < gm.avatarSprites.Length)
+                if (netPlayer != null)
                 {
-                    profilePhoto.sprite = gm.avatarSprites[player.AvatarIndex];
+                    int index = netPlayer.avatarIndex.Value;
+
+                    if (avatarDatabase != null &&
+                        avatarDatabase.avatarSprites != null &&
+                        index >= 0 &&
+                        index < avatarDatabase.avatarSprites.Length)
+                    {
+                        profilePhoto.sprite = avatarDatabase.avatarSprites[index];
+                    }
                 }
             }
-            Debug.Log("SETTING AVATAR: " + player.PlayerName + " index: " + player.AvatarIndex);
-
+            Debug.Log("NETWORK AVATAR APPLIED: " + player.PlayerName);
         }
         // Subscribe to turn event
         playerInstance.OnTurnChanged += HandleTurnChanged;

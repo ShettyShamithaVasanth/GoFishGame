@@ -9,10 +9,10 @@ public class MatchmakingStarter : MonoBehaviour
         // if not online mode, do nothing
         if (!GameModeManager.isOnlineMode)
         {
-             return;
+            return;
         }
         Debug.Log("Online mode detected → starting matchmaking");
-           
+
         //Show matchmaking UI
         if (MatchmakingUIController.Instance != null)
         {
@@ -21,8 +21,19 @@ public class MatchmakingStarter : MonoBehaviour
 
         //Get saved profile data
         string playerName = ProfileData.PlayerName;
-        Sprite avatar = ProfileData.PlayerAvatar;
+        int index = ProfileData.PlayerAvatarIndex;
+        Sprite avatar = null;
 
+        // get AvatarDatabase from LobbyManager
+        var db = FindFirstObjectByType<LobbyManager>()?.avatarDatabase;
+
+        if (db != null &&
+            db.avatarSprites != null &&
+            index >= 0 &&
+            index < db.avatarSprites.Length)
+        {
+            avatar = db.avatarSprites[index];
+        }
         //Safety check
         if (string.IsNullOrEmpty(playerName))
         {

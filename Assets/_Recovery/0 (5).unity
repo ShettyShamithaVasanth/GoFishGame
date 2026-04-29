@@ -8432,8 +8432,6 @@ MonoBehaviour:
   menuBackground: {fileID: 1473132312}
   topProfileAvatar: {fileID: 1014590558}
   topProfileName: {fileID: 1726997970}
-  avatarDatabase: {fileID: 11400000, guid: b4edf01818d93bb4a881334825dff7d0, type: 2}
-  avatarPreviewImage: {fileID: 1064625229}
 --- !u!4 &663148357
 Transform:
   m_ObjectHideFlags: 0
@@ -15850,7 +15848,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2424801877
+  GlobalObjectIdHash: 1602113774
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -23904,7 +23902,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1398678501
+  GlobalObjectIdHash: 2144266464
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -28533,7 +28531,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 271987958
+  GlobalObjectIdHash: 1396741483
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -28591,7 +28589,6 @@ MonoBehaviour:
   - {fileID: 1064019857}
   - {fileID: 1591240564}
   topProfileAvatar: {fileID: 1014590558}
-  avatarDatabase: {fileID: 11400000, guid: b4edf01818d93bb4a881334825dff7d0, type: 2}
   topProfileName: {fileID: 1726997970}
   profileIDText: {fileID: 1547526726}
   gamesPlayedText: {fileID: 959820432}

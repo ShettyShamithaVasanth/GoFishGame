@@ -1536,6 +1536,7 @@ MonoBehaviour:
   popup2Text: {fileID: 2036562909988363843}
   scoreText: {fileID: 5438902951289009671}
   canInteract: 0
+  avatarDatabase: {fileID: 11400000, guid: b4edf01818d93bb4a881334825dff7d0, type: 2}
 --- !u!61 &1792136561828363879
 BoxCollider2D:
   m_ObjectHideFlags: 0

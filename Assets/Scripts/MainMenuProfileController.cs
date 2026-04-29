@@ -11,10 +11,12 @@ public class MainMenuProfileController : MonoBehaviour
     public GameObject menuBackground; // 🔥 ADD THIS
     public List<Image> avatarImages; // all avatars (same list as edit panel)
     public Image topProfileAvatar;
+    public AvatarDatabase avatarDatabase;
     public TextMeshProUGUI topProfileName;
     public TextMeshProUGUI profileIDText;
     public TextMeshProUGUI gamesPlayedText;
     public TextMeshProUGUI gamesWonText;
+
 
     void Start()
     {
@@ -30,7 +32,7 @@ public class MainMenuProfileController : MonoBehaviour
 
         if (avatarImages != null && avatarImages.Count > avatarIndex)
         {
-            ProfileData.PlayerAvatar = avatarImages[avatarIndex].sprite;
+            ProfileData.PlayerAvatarIndex = avatarIndex;
         }
 
         // 🔥 UPDATE UI IMMEDIATELY
@@ -45,15 +47,15 @@ public class MainMenuProfileController : MonoBehaviour
         if (topProfileName != null)
             topProfileName.text = ProfileData.PlayerName;
 
-        if (topProfileAvatar != null && ProfileData.PlayerAvatar != null)
-            topProfileAvatar.sprite = ProfileData.PlayerAvatar;
+        if (topProfileAvatar != null && avatarImages != null && avatarImages.Count > ProfileData.PlayerAvatarIndex)
+            topProfileAvatar.sprite = avatarImages[ProfileData.PlayerAvatarIndex].sprite;
 
         // ⭐ ALSO UPDATE STATS PANEL
         if (statsNameText != null)
             statsNameText.text = ProfileData.PlayerName;
 
-        if (statsAvatarImage != null && ProfileData.PlayerAvatar != null)
-            statsAvatarImage.sprite = ProfileData.PlayerAvatar;
+        if (statsAvatarImage != null && avatarImages != null && avatarImages.Count > ProfileData.PlayerAvatarIndex)
+            statsAvatarImage.sprite = avatarImages[ProfileData.PlayerAvatarIndex].sprite;
     }
 
     // 🔥 OPEN STATS PANEL

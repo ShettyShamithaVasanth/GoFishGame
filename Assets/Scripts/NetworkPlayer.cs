@@ -9,10 +9,11 @@ public class NetworkPlayer : NetworkBehaviour
     public List<int> hand = new List<int>();
     public NetworkVariable<int> score = new NetworkVariable<int>(0);
     public List<int> completedBooks = new List<int>();
+    public NetworkVariable<int> avatarIndex = new NetworkVariable<int>();
 
     public override void OnNetworkSpawn()
     {
-        Debug.Log($"[OnNetworkSpawn] Player: {OwnerClientId} | IsSever : {IsServer} | IsClient: {IsClient} | IsOwner: {IsOwner } |  LocalClientId:{NetworkManager.Singleton.LocalClientId}");
+        Debug.Log($"[OnNetworkSpawn] Player: {OwnerClientId} | IsSever : {IsServer} | IsClient: {IsClient} | IsOwner: {IsOwner} |  LocalClientId:{NetworkManager.Singleton.LocalClientId}");
         if (IsServer && IsSpawned)
         {
 
@@ -29,8 +30,15 @@ public class NetworkPlayer : NetworkBehaviour
         if (IsOwner)
         {
             SetPlayerNameServerRpc("Player_" + OwnerClientId);
+            SetAvatarIndexServerRpc(ProfileData.PlayerAvatarIndex);
         }
         gameObject.name = $"Player_{OwnerClientId}";
+    }
+
+    [ServerRpc]
+    void SetAvatarIndexServerRpc(int index)
+    {
+        avatarIndex.Value = index;
     }
     public void AddCard(int card)
     {

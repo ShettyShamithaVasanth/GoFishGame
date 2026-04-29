@@ -13,7 +13,7 @@ public class EditProfileController : MonoBehaviour
     public Image profileAvatarImage; // avatar in stats panel
     public TMPro.TextMeshProUGUI profileNameText; // name in stats panel
 
-    private Sprite selectedAvatar;
+    // private Sprite selectedAvatar;
     public List<Image> avatarImages;   // all avatars
     private Image currentSelectedAvatar;
 
@@ -24,7 +24,9 @@ public class EditProfileController : MonoBehaviour
     private int selectedAvatarIndex = 0;
 
     private string tempName;
-    private Sprite tempAvatar;
+    private int tempAvatarIndex = 0;
+    public AvatarDatabase avatarDatabase;   // drag in inspector
+    public UnityEngine.UI.Image avatarPreviewImage; // preview image in UI
 
     // 🔓 OPEN EDIT PANEL
     public void OpenEditProfile()
@@ -32,10 +34,20 @@ public class EditProfileController : MonoBehaviour
         editProfilePanel.SetActive(true);
         statsPanel.SetActive(false);
         // 🔥 LOAD CURRENT AVATAR
-        selectedAvatar = ProfileData.PlayerAvatar;
+        selectedAvatarIndex = ProfileData.PlayerAvatarIndex;
         // 🔥 LOAD CURRENT NAME INTO INPUT
         if (nameInput != null)
             nameInput.text = ProfileData.PlayerName;
+
+        int index = ProfileData.PlayerAvatarIndex;
+
+        if (avatarDatabase != null &&
+            avatarDatabase.avatarSprites != null &&
+            index >= 0 &&
+            index < avatarDatabase.avatarSprites.Length)
+        {
+            avatarPreviewImage.sprite = avatarDatabase.avatarSprites[index];
+        }
     }
 
     // ❌ CLOSE EDIT PANEL
@@ -48,8 +60,6 @@ public class EditProfileController : MonoBehaviour
     // 🧑 SELECT AVATAR
     public void SelectAvatar(Image clickedImage)
     {
-        selectedAvatar = clickedImage.sprite;
-
         // 🔥 FIND INDEX
         selectedAvatarIndex = avatarImages.IndexOf(clickedImage);
 
@@ -74,13 +84,13 @@ public class EditProfileController : MonoBehaviour
 
         // 🔥 STORE TEMP (NOT FINAL YET)
         tempName = newName;
-        tempAvatar = selectedAvatar;
+        tempAvatarIndex = selectedAvatarIndex;
 
         // 🔥 UPDATE STATSPANEL (PREVIEW)
         profileNameText.text = tempName;
 
-        if (tempAvatar != null)
-            profileAvatarImage.sprite = tempAvatar;
+        if (avatarImages != null && avatarImages.Count > tempAvatarIndex)
+            profileAvatarImage.sprite = avatarImages[tempAvatarIndex].sprite;
 
         Debug.Log("Preview Updated");
 
@@ -93,14 +103,14 @@ public class EditProfileController : MonoBehaviour
         ProfileSaveSystem.SaveProfile(tempName, selectedAvatarIndex);
         // 🔥 STORE GLOBALLY
         ProfileData.PlayerName = tempName;
-        ProfileData.PlayerAvatar = tempAvatar;
+        ProfileData.PlayerAvatarIndex = tempAvatarIndex;
         PlayFabProfileManager.Instance.SaveProfile(tempName, selectedAvatarIndex);
         // 🔥 UPDATE TOP BAR PROFILE
         if (topProfileName != null)
             topProfileName.text = tempName;
 
-        if (topProfileAvatar != null && tempAvatar != null)
-            topProfileAvatar.sprite = tempAvatar;
+        if (topProfileAvatar != null && avatarImages != null && avatarImages.Count > tempAvatarIndex)
+            topProfileAvatar.sprite = avatarImages[tempAvatarIndex].sprite;
 
         // 🔥 GO BACK TO MENU
         statsPanel.SetActive(false);

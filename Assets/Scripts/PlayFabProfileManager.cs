@@ -67,7 +67,7 @@ public class PlayFabProfileManager : MonoBehaviour
 
                 if (menu != null && menu.avatarImages.Count > avatarIndex)
                 {
-                    ProfileData.PlayerAvatar = menu.avatarImages[avatarIndex].sprite;
+                    ProfileData.PlayerAvatarIndex = avatarIndex;
                 }
 
                 // 🔥 UPDATE UI
