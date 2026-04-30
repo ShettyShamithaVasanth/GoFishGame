@@ -51,7 +51,8 @@ public class NetworkPlayer : NetworkBehaviour
         List<int> matched = new List<int>();
         for (int i = hand.Count - 1; i >= 0; i--)
         {
-            if (hand[i] == rank)
+            int cardRank = hand[i] / 10;
+            if (cardRank == rank)
             {
                 matched.Add(hand[i]);
                 hand.RemoveAt(i);
@@ -59,9 +60,16 @@ public class NetworkPlayer : NetworkBehaviour
         }
         return matched;
     }
+    
     public bool HasRank(int rank)
     {
-        return hand.Contains(rank);
+        foreach (int card in hand)
+        {
+            int cardRank = card / 10;
+            if (cardRank == rank)
+                return true;
+        }
+        return false;
     }
 
     [ServerRpc]

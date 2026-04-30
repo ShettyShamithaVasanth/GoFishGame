@@ -128,11 +128,12 @@ public class MenuController : MonoBehaviour
         DeckPosition.SetActive(true);
 
         GameManager.SetActive(true);
+        GameManager.GetComponent<GameManager>().SetupGame();    
 
-        foreach (UIPlayer p in uiPlayers)
-        {
-            p.canInteract = true;
-        }
+        // foreach (UIPlayer p in uiPlayers)
+        // {
+        //     p.canInteract = true;
+        // }
 
         if (gameSceneUI != null)
         {

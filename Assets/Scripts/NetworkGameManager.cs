@@ -21,44 +21,80 @@ public class NetworkGameManager : NetworkBehaviour
     {
         isGameStarted.OnValueChanged += OnGameStartedChanged;
         currentTurnPlayerId.OnValueChanged += OnTurnchanged;
+        Debug.Log("NetworkGameManager Spawned ✔" + $" | Server: {IsServer} | Client: {IsClient}");
         // Start game on server
         if (IsServer)
         {
-            StartCoroutine(StartGameWithDelay());
+            StartCoroutine(StartGameWithEnoughPlayers());
         }
     }
 
-    System.Collections.IEnumerator StartGameWithDelay()
+    System.Collections.IEnumerator StartGameWithEnoughPlayers()
     {
-        Debug.Log("Waiting before starting game...");
-        yield return new WaitForSeconds(1.5f);
-        var players = NetworkPlayerManager.Instance.players;
+        Debug.Log("Waiting for enough players to start game...");
+        float waitTime = 0f;
+        float maxWaitTime = 60f; // safety (not hardcoding behavior, just timeout)
 
-        if (players == null || players.Count < 2)
+        while (true)
         {
-            Debug.Log("Not enough players to start");
-            yield break;
+            var players = NetworkPlayerManager.Instance.players;
+            //Enough players
+            if (players != null && players.Count >= 2)
+            {
+                Debug.Log("Enough players found. Starting game...");
+                break;
+            }
+
+            //Timeout (fallback safety)
+            if (waitTime >= maxWaitTime)
+            {
+                Debug.Log("Timeout reached. Starting game anyway...");
+                break;
+            }
+            Debug.Log("Still waiting for players...");
+            yield return new WaitForSeconds(1f); // ⏱ check every 1 second
+            waitTime += 1f;
         }
 
-        Debug.Log("Starting Game Automatically...");
+        //START GAME FLOW (CLEAN)
         DealCardsToPlayers();
         SetFirstTurn();
         isGameStarted.Value = true;
+
+        //CALL LOBBY MANAGER START (as your manager said)
+        if (LobbyManager.Instance != null)
+        {
+            LobbyManager.Instance.StartGame();
+        }
     }
-    
+
     public override void OnNetworkDespawn()
     {
         isGameStarted.OnValueChanged -= OnGameStartedChanged;
         currentTurnPlayerId.OnValueChanged -= OnTurnchanged;
     }
+
     void OnGameStartedChanged(bool oldValue, bool newValue)
     {
+        Debug.Log("StartGameClient CALLED");
         if (newValue)
         {
             Debug.Log("GAME STARTED ON ALL CLIENTS");
             StartGameClient();
+            StartCoroutine(HideEnteringPanelAfterDelay());
             // ADD THIS HERE (correct place)
             CheckIfMyTurn(currentTurnPlayerId.Value);
+        }
+    }
+
+    System.Collections.IEnumerator HideEnteringPanelAfterDelay()
+    {
+        yield return new WaitForSeconds(3f); // ⏱ 3 seconds
+        if (LobbyManager.Instance != null &&
+            LobbyManager.Instance.enteringGamePanel != null)
+        {
+            LobbyManager.Instance.enteringGamePanel.SetActive(false);
+            Debug.Log("Entering panel hidden ✔");
         }
     }
 
@@ -92,8 +128,28 @@ public class NetworkGameManager : NetworkBehaviour
 
     void StartGameClient()
     {
+        Debug.Log("StartGameClient CALLED");
         Debug.Log("Client initializing game...");
-        // Later: connect to your GameManager here
+        // STEP 1 — Find GameManager in scene
+        GameManager gm = FindFirstObjectByType<GameManager>();
+        // Safety check
+        if (gm == null)
+        {
+            Debug.LogError("GameManager NOT FOUND ❌");
+            return;
+        }
+
+        GameModeManager.isOnlineMode = true;
+        Debug.Log("Calling InitializeMultiplayer");
+        // STEP 2 — Initialize multiplayer setup
+        gm.InitializeMultiplayer();
+        Debug.Log("game started client side ✔");
+        // // STEP 3 — Camera check (just safety, no changes)
+        // Camera cam = Camera.main;
+        // if (cam != null)
+        // {
+        //     Debug.Log("Camera ready ✔");
+        // }
     }
 
     void DealCardsToPlayers()
@@ -229,15 +285,17 @@ public class NetworkGameManager : NetworkBehaviour
             NextTurn();
         }
     }
+
     void CheckForBook(NetworkPlayer player)
     {
         Dictionary<int, int> count = new Dictionary<int, int>();
 
         foreach (var card in player.hand)
         {
-            if (!count.ContainsKey(card))
-                count[card] = 0;
-            count[card]++;
+            int rank = card / 10;
+            if (!count.ContainsKey(rank))
+                count[rank] = 0;
+            count[rank]++;
         }
 
         foreach (var kvp in count)
@@ -246,7 +304,7 @@ public class NetworkGameManager : NetworkBehaviour
             {
                 int rank = kvp.Key;
                 Debug.Log($"BOOK CREATED! Player {player.OwnerClientId} completed rank {rank}");
-                player.hand.RemoveAll(c => c == rank);
+                player.hand.RemoveAll(c => (c / 10) == rank);
                 // score book
                 player.completedBooks.Add(rank);
                 // update score

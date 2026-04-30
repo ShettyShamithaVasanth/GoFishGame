@@ -94,7 +94,7 @@ public class UIPlayer : MonoBehaviour, ICardOwner
 
     void Start()
     {
-        canInteract = false;
+      //  canInteract = false;
     }
     public void UpdateScore(int newScore)
     {
@@ -267,6 +267,7 @@ public class UIPlayer : MonoBehaviour, ICardOwner
 
     void HandleClick(Vector2 screenPos)
     {
+        Debug.Log("UIPlayer canInteract  " + canInteract);
         if (!canInteract)
             return;
 

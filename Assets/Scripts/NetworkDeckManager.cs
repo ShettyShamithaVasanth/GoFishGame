@@ -23,17 +23,17 @@ public class NetworkDeckManager : NetworkBehaviour
     void CreateDeck()
     {
         deck.Clear();
-        // 13 ranks,4 for each
-        for (int rank=1; rank <= 13; rank++)
+        for (int suit = 0; suit < 4; suit++)
         {
-            for (int i = 0; i < 4; i++)
+            for (int rank = 1; rank <= 13; rank++)
             {
-                deck.Add(rank);
+                int cardValue = (rank * 10) + suit;
+                deck.Add(cardValue);
             }
         }
-        Debug.Log("Deck Created: " + deck.Count );
+        Debug.Log("Deck Created: " + deck.Count);
     }
-    
+
     void ShuffleDeck()
     {
         for (int i = 0; i < deck.Count; i++)

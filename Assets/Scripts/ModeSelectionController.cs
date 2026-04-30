@@ -75,8 +75,8 @@ public class ModeSelectionController : MonoBehaviour
 
         GameManager.SetActive(true);
 
-        foreach (UIPlayer p in uiPlayers)
-            p.canInteract = true;
+        // foreach (UIPlayer p in uiPlayers)
+        //     p.canInteract = true;
 
         gameSceneUI.ShowPanel();
         Debug.Log("Game started. UI Players can now interact.");

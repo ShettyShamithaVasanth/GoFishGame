@@ -14,6 +14,10 @@ public class LobbyManager : MonoBehaviour
     public GameObject creatingRoomPanel;
     public GameObject lobbyPanel;
 
+    public ToastUI toastUI;
+    public GameObject errorPopup;
+    public TMPro.TextMeshProUGUI errorText;
+
     public PlayerProfileUI[] playerSlots; // 0 = YOU
     public GameObject menuBackground;
 
@@ -30,6 +34,14 @@ public class LobbyManager : MonoBehaviour
     float polltimer = 0f;
     float pollInterval = 2f;
 
+    enum ErrorAction
+    {
+        None,
+        GoToMenu,
+        Stay
+    }
+    ErrorAction pendingAction = ErrorAction.None;
+
     void Awake()
     {
         Instance = this;
@@ -45,6 +57,77 @@ public class LobbyManager : MonoBehaviour
         {
             polltimer = 0f;
             _ = RefreshLobby();
+        }
+    }
+
+    void ShowToast(string msg)
+    {
+        if (toastUI != null)
+            toastUI.ShowToastWithAutoHide(msg, 3f);
+    }
+    void ShowErrorPopup(string msg)
+    {
+        if (errorPopup != null)
+            errorPopup.SetActive(true);
+
+        if (errorText != null)
+            errorText.text = msg;
+    }
+
+    public void OnErrorPopupOK()
+    {
+        // hide popup
+        if (errorPopup != null)
+            errorPopup.SetActive(false);
+
+        //CHECK WHAT TO DO NEXT
+        if (pendingAction == ErrorAction.GoToMenu)
+        {
+            Debug.Log("Going back to menu...");
+
+            // show menu background
+            if (menuBackground != null)
+                menuBackground.SetActive(true);
+
+            // hide other panels
+            if (friendsPanel != null)
+                friendsPanel.SetActive(false);
+            if (lobbyPanel != null)
+                lobbyPanel.SetActive(false);
+            if (creatingRoomPanel != null)
+                creatingRoomPanel.SetActive(false);
+        }
+        // reset action
+        pendingAction = ErrorAction.None;
+    }
+
+    void OnEnable()
+    {
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.SceneManager.OnLoadComplete += OnSceneLoaded;
+        }
+    }
+    void OnDisable()
+    {
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.SceneManager.OnLoadComplete -= OnSceneLoaded;
+        }
+    }
+
+    void OnSceneLoaded(ulong clientId, string sceneName, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        Debug.Log("Scene loaded: " + sceneName + " for client: " + clientId);
+
+        // Only affect THIS client
+        if (clientId == NetworkManager.Singleton.LocalClientId)
+        {
+            // Hide entering panel
+            if (enteringGamePanel != null)
+            {
+                enteringGamePanel.SetActive(false);
+            }
         }
     }
 
@@ -84,7 +167,7 @@ public class LobbyManager : MonoBehaviour
         if (NetworkManager.Singleton != null &&
             NetworkManager.Singleton.IsListening)
         {
-            NetworkManager.Singleton.Shutdown();
+            // NetworkManager.Singleton.Shutdown();
             Debug.Log("Network stopped");
         }
 
@@ -95,14 +178,12 @@ public class LobbyManager : MonoBehaviour
         if (creatingRoomPanel != null)
             creatingRoomPanel.SetActive(false);
 
-        // STEP 4 — Show main menu again
-        if (menuBackground != null)
-            menuBackground.SetActive(true);
+        //STEP 4 — Show main menu again
+        // if (menuBackground != null)
+        //     menuBackground.SetActive(true);
 
-        // STEP 5 — Debug message (later → popup UI)
-        Debug.Log("You were removed OR host left the lobby");
-        // You can later show UI popup
-        Debug.Log("Disconnected from lobby");
+        ShowErrorPopup("Disconnected from lobby");
+        pendingAction = ErrorAction.Stay;
     }
 
 
@@ -195,7 +276,29 @@ public class LobbyManager : MonoBehaviour
     {
         code = code.Trim().ToUpper();
         Debug.Log("Joining Lobby with code: " + code);
-        currentLobby = await LobbyService.Instance.JoinLobbyByCodeAsync(code);
+        try
+        {
+            currentLobby = await LobbyService.Instance.JoinLobbyByCodeAsync(code);
+        }
+        catch (LobbyServiceException e)
+        {
+            Debug.LogError(e);
+
+            if (e.Reason == LobbyExceptionReason.InvalidJoinCode)
+            {
+                // CASE 1 handled here (toast)
+                ShowToast("Invalid Room Code");
+            }
+            else
+            {
+                //THIS IS STEP 4 (NO INTERNET)
+                ShowErrorPopup("Check your internet");
+
+                //tell system → go to menu after OK
+                pendingAction = ErrorAction.GoToMenu;
+            }
+            return; // STOP EXECUTION
+        }
 
         await LobbyService.Instance.UpdatePlayerAsync(currentLobby.Id,
         Unity.Services.Authentication.AuthenticationService.Instance.PlayerId, new UpdatePlayerOptions
@@ -220,6 +323,11 @@ public class LobbyManager : MonoBehaviour
         if (enteringGamePanel != null)
         {
             enteringGamePanel.SetActive(true);
+        }
+
+        if (menuBackground != null)
+        {
+            menuBackground.SetActive(false);
         }
         await JoinRelay();
     }
@@ -255,22 +363,55 @@ public class LobbyManager : MonoBehaviour
     //JOIN RELAY (CLIENT SIDE)
     async Task JoinRelay()
     {
-        string relayCode = currentLobby.Data["relayCode"].Value;
-        Debug.Log("Joining Relay with code: " + relayCode);
-        JoinAllocation allocation = await RelayService.Instance.JoinAllocationAsync(relayCode);
-        var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+        try
+        {
+            Debug.Log("Joining Relay...");
+            //Get relay code from lobby
+            string relayCode = currentLobby.Data["relayCode"].Value;
+            Debug.Log("Relay Code: " + relayCode);
 
-        transport.SetRelayServerData(
-            allocation.RelayServer.IpV4,
-            (ushort)allocation.RelayServer.Port,
-            allocation.AllocationIdBytes,
-            allocation.Key,
-            allocation.ConnectionData,
-            allocation.HostConnectionData
-        );
-        Debug.Log("Starting Client...");
-        NetworkManager.Singleton.StartClient();
+            //Join relay allocation
+            JoinAllocation allocation =
+                await RelayService.Instance.JoinAllocationAsync(relayCode);
+            //Configure transport
+            var transport = NetworkManager.Singleton
+                .GetComponent<UnityTransport>();
+
+            transport.SetRelayServerData(
+                allocation.RelayServer.IpV4,
+                (ushort)allocation.RelayServer.Port,
+                allocation.AllocationIdBytes,
+                allocation.Key,
+                allocation.ConnectionData,
+                allocation.HostConnectionData
+            );
+
+            //Start client
+            Debug.Log("Starting Client...");
+            NetworkManager.Singleton.StartClient();
+            // StartCoroutine(FallbackHideEnteringPanel());
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("Relay failed: " + e.Message);
+            //SHOW ERROR POPUP
+            ShowErrorPopup("Connection failed");
+            //STAY IN SAME SCREEN
+            pendingAction = ErrorAction.Stay;
+        }
     }
+
+    // System.Collections.IEnumerator FallbackHideEnteringPanel()
+    // {
+    //     yield return new WaitForSeconds(10f);
+
+    //     // if still visible, force hide
+    //     if (enteringGamePanel != null && enteringGamePanel.activeSelf)
+    //     {
+    //         Debug.LogWarning("Force hiding entering panel (fallback)");
+    //         enteringGamePanel.SetActive(false);
+    //     }
+    // }
 
     public void CloseLobby()
     {
@@ -324,14 +465,36 @@ public class LobbyManager : MonoBehaviour
             Debug.Log("Only host can start the game.");
             return;
         }
+        // Minimum 2 players to start
+        if (currentLobby == null || currentLobby.Players.Count < 2)
+        {
+            Debug.Log("Not enough players to start the game.");
+            ShowToast("At least 2 players required");
+            return;
+        }
 
-        Debug.Log("Host starting game with scene sync...");
+        // Debug.Log("Starting Game...");
+        Debug.Log("starting game,loadidng scene...");
+        // hide lobby UI
+        if (lobbyPanel != null)
+            lobbyPanel.SetActive(false);
+        // disable menu background
+        if (menuBackground != null)
+            menuBackground.SetActive(false);
 
-        //Hide lobby UI
-        lobbyPanel.SetActive(false);
-        //LOAD GAME SCENE (THIS IS THE REAL FIX)
-        NetworkManager.Singleton.SceneManager.LoadScene("GameScene",
-            UnityEngine.SceneManagement.LoadSceneMode.Single);
+        // hide all menu panels
+        if (friendsPanel != null)
+            friendsPanel.SetActive(false);
+        if (matchmakingPanel != null)
+            matchmakingPanel.SetActive(false);
+        if (modeSelectionPanel != null)
+            modeSelectionPanel.SetActive(false);
+
+        //show loading panel (for clients)
+        if (enteringGamePanel != null)
+            enteringGamePanel.SetActive(true);
+        // load game scene using Netcode SceneManager
+//        NetworkManager.Singleton.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
     }
 
     // [Unity.Netcode.ClientRpc]
@@ -436,6 +599,8 @@ public class LobbyManager : MonoBehaviour
             }
         }
     }
+
+
 
 
 }

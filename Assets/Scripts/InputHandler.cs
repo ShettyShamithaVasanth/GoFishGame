@@ -8,14 +8,14 @@ public class InputHandler : MonoBehaviour
 
     void Update()
     {
-        // 👉 Touch FIRST (priority)
+        //Touch FIRST (priority)
         if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
         {
             OnClick?.Invoke(Touchscreen.current.primaryTouch.position.ReadValue());
-            return; // 🔥 IMPORTANT — stops double call
+            return; //IMPORTANT — stops double call
         }
 
-        // 👉 Mouse
+        //Mouse
         if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
         {
             OnClick?.Invoke(Mouse.current.position.ReadValue());

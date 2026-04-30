@@ -3,6 +3,7 @@ using UnityEngine.Rendering;
 using System.Collections.Generic;
 using DG.Tweening;
 using System.Collections;
+using Unity.Netcode;
 
 public struct AIProfile
 {
@@ -92,8 +93,15 @@ public class GameManager : MonoBehaviour, ICardOwner
         {
             gameOverUI.gameOverPanel.SetActive(false);
         }
+        if(toastUI != null)
+        {
+            toastUI.HideToast();
+        }
 
-        SetupGame();
+        if (!GameModeManager.isOnlineMode)
+        {
+           // SetupGame();
+        }
     }
 
     public void OnCardSelected(int rank, UICard card)
@@ -117,7 +125,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         Debug.LogError("UI index not found for playerID: " + playerID);
         return 0;
     }
-    void SetupGame()
+    public  void SetupGame()
     {
         Debug.Log("SetupGame CALLED");
 
@@ -1361,7 +1369,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         // 🔥 RESET PLAYERS UI
         foreach (UIPlayer ui in uiPlayers)
         {
-            ui.canInteract = true;
+          //  ui.canInteract = true;
 
             // clear cards visually
             ui.RefreshHand(false); // temporary clear
@@ -1370,6 +1378,82 @@ public class GameManager : MonoBehaviour, ICardOwner
         // 🔥 RESTART GAME COMPLETELY
         SetupGame();
     }
+
+    public void InitializeMultiplayer()
+    {
+        Debug.Log("Initializing Multiplayer Game Setup...");
+
+        // STEP 0 — Make sure players array exists
+        players = new Player[4];
+
+        // Safety
+        if (NetworkPlayerManager.Instance == null)
+        {
+            Debug.LogError("NetworkPlayerManager missing ❌");
+            return;
+        }
+
+        var netPlayers = NetworkPlayerManager.Instance.players;
+
+        if (netPlayers == null || netPlayers.Count == 0)
+        {
+            Debug.LogError("No network players found ❌");
+            return;
+        }
+
+        // STEP 1 — Assign UI players based on network players
+        for (int i = 0; i < netPlayers.Count; i++)
+        {
+            if (i >= uiPlayers.Length) break;
+
+            NetworkPlayer netPlayer = netPlayers[i];
+
+            // Create local Player object using network data
+            Player p = new Player(
+                i,
+                netPlayer.playerName.Value.ToString(),
+                netPlayer.OwnerClientId == NetworkManager.Singleton.LocalClientId,
+                netPlayer.avatarIndex.Value
+            );
+
+            players[i] = p;
+
+            // Initialize UI
+            uiPlayers[i].Initialize(p);
+        }
+
+        activePlayers = new int[NetworkPlayerManager.Instance.players.Count];
+
+        for (int i = 0; i < activePlayers.Length; i++)
+        {
+            activePlayers[i] = i;
+        }
+        deck = new Deck(this);
+
+        for (int i = 0; i < netPlayers.Count; i++)
+        {
+            foreach (var card in netPlayers[i].hand)
+            {
+                players[i].AddCard(ConvertToCard(card));
+            }
+        }
+        //Refresh all hands visually
+        RefreshAllHands();
+
+        CreateDeckVisual();
+        currentPlayer = 0;
+        StartCurrentTurn();
+
+        // STEP 3 — Enable interaction
+        foreach (UIPlayer ui in uiPlayers)
+        {
+            ui.canInteract = true;
+        }
+
+        Debug.Log("Multiplayer Setup Complete ✔");
+    }
+
+
     void UpdateMemoryOnSuccess(int playerID, int rank)
     {
         // target had cards → strong confidence
@@ -1457,6 +1541,13 @@ public class GameManager : MonoBehaviour, ICardOwner
         sortedRanks.Sort((a, b) => rankScores[b].CompareTo(rankScores[a]));
 
         return sortedRanks;
+    }
+
+    Card ConvertToCard(int value)
+    {
+        int rank = value / 10;
+        int suit = value % 10;
+        return new Card(rank, (CardSuit)suit);
     }
 
 

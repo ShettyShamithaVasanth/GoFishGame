@@ -9,16 +9,27 @@ public class ToastUI : MonoBehaviour
 
     private Tween currentTween;
 
-    // ⭐ SHOW (NO AUTO HIDE)
+    void Awake()
+    {
+        // Always start hidden
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = 0;
+        }
+
+        gameObject.SetActive(false); 
+    }
+    //SHOW (NO AUTO HIDE)
     public void ShowToast(string message)
     {
+        gameObject.SetActive(true);
         if (currentTween != null)
             currentTween.Kill();
 
         toastText.text = message;
 
         canvasGroup.alpha = 0;
-        currentTween = canvasGroup.DOFade(1, 0.25f);
+        currentTween = canvasGroup.DOFade(1, 0.25f).SetLink(gameObject);
     }
 
     // ⭐ HIDE MANUALLY
@@ -30,11 +41,15 @@ public class ToastUI : MonoBehaviour
         if (currentTween != null)
             currentTween.Kill();
 
-        currentTween = canvasGroup.DOFade(0, 0.25f).SetLink(gameObject);
+        currentTween = canvasGroup.DOFade(0, 0.25f).OnComplete(() =>
+        {
+            gameObject.SetActive(false);
+        }).SetLink(gameObject);
     }
 
     public void ShowToastWithAutoHide(string message, float duration)
     {
+        gameObject.SetActive(true);
         if (canvasGroup == null)
             return;
 
