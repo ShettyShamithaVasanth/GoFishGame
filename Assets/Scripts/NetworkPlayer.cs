@@ -60,7 +60,7 @@ public class NetworkPlayer : NetworkBehaviour
         }
         return matched;
     }
-    
+
     public bool HasRank(int rank)
     {
         foreach (int card in hand)

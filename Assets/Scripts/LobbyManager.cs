@@ -103,14 +103,14 @@ public class LobbyManager : MonoBehaviour
 
     void OnEnable()
     {
-        if (NetworkManager.Singleton != null)
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
         {
             NetworkManager.Singleton.SceneManager.OnLoadComplete += OnSceneLoaded;
         }
     }
     void OnDisable()
     {
-        if (NetworkManager.Singleton != null)
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
         {
             NetworkManager.Singleton.SceneManager.OnLoadComplete -= OnSceneLoaded;
         }

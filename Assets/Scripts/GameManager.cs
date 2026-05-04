@@ -55,6 +55,8 @@ public class GameManager : MonoBehaviour, ICardOwner
     // ⭐ tracks asked rank per target in current turn
     private HashSet<string> askedRankTargetThisTurn = new HashSet<string>();
     private HashSet<int> completedRanks = new HashSet<int>();
+    // ⭐ Maps local playerID → real network clientId
+    private Dictionary<int, ulong> playerIdToClientId = new Dictionary<int, ulong>();
 
     public GameOverUI gameOverUI;
     private bool gameOver = false;
@@ -93,14 +95,14 @@ public class GameManager : MonoBehaviour, ICardOwner
         {
             gameOverUI.gameOverPanel.SetActive(false);
         }
-        if(toastUI != null)
+        if (toastUI != null)
         {
             toastUI.HideToast();
         }
 
         if (!GameModeManager.isOnlineMode)
         {
-           // SetupGame();
+            // SetupGame();
         }
     }
 
@@ -125,7 +127,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         Debug.LogError("UI index not found for playerID: " + playerID);
         return 0;
     }
-    public  void SetupGame()
+    public void SetupGame()
     {
         Debug.Log("SetupGame CALLED");
 
@@ -225,6 +227,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         {
             int id = activePlayers[i];
             uiPlayers[i].Initialize(players[id]);
+            BindUIPlayer(uiPlayers[i]);
         }
 
         // 6️⃣ Hide unused UI players
@@ -245,7 +248,14 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
 
         // 8️⃣ Deck visual
-        CreateDeckVisual();
+        if (cardBackPrefab == null || deckPosition == null)
+        {
+            Debug.LogError("Deck Visual references missing");
+        }
+        else
+        {
+            CreateDeckVisual();
+        }
 
         // 9️⃣ Start first turn
         currentPlayer = activePlayers[0];
@@ -258,13 +268,57 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
     }
 
+    private void HandleUITargetClicked(UIPlayer uiPlayer, int targetID)
+    {
+        if (players == null || activePlayers == null)
+            return;
+
+        HumanSelectTarget(targetID);
+    }
+    private void HandleUIRankSelected(UIPlayer uiPlayer, int rank)
+    {
+        if (players == null || activePlayers == null)
+            return;
+
+        if (!players[currentPlayer].IsHuman)
+            return;
+
+        if (uiPlayer.GetPlayerID() != currentPlayer)
+            return;
+
+        SetSelectedRank(rank);
+    }
+
+    private void BindUIPlayer(UIPlayer uiPlayer)
+    {
+        uiPlayer.cardData = cardData;
+        uiPlayer.OnTargetClicked -= HandleUITargetClicked;
+        uiPlayer.OnRankSelected -= HandleUIRankSelected;
+        uiPlayer.OnTargetClicked += HandleUITargetClicked;
+        uiPlayer.OnRankSelected += HandleUIRankSelected;
+    }
+
     void CreateDeckVisual()
     {
         deckVisualCards.Clear();
 
-        int totalDeckCards = deck.CardCount();
+        int totalDeckCards = 0;
 
-        // 🔥 only show max 8 cards visually
+        if (GameModeManager.isOnlineMode)
+        {
+            if (NetworkDeckManager.Instance == null)
+            {
+                Debug.LogError("NetworkDeckManager missing");
+                return;
+            }
+            totalDeckCards = NetworkDeckManager.Instance.deck.Count;
+        }
+        else
+        {
+            totalDeckCards = deck.CardCount();
+        }
+
+        //only show max 8 cards visually
         int visualCount = Mathf.Min(totalDeckCards, maxVisibleDeckCards);
 
         for (int i = 0; i < visualCount; i++)
@@ -281,7 +335,17 @@ public class GameManager : MonoBehaviour, ICardOwner
 
             uiCard.cardData = cardData;
 
-            Card deckCard = deck.GetAllCards()[i];
+            Card deckCard;
+
+            if (GameModeManager.isOnlineMode)
+            {
+                int value = NetworkDeckManager.Instance.deck[i];
+                deckCard = ConvertToCard(value);
+            }
+            else
+            {
+                deckCard = deck.GetAllCards()[i];
+            }
 
             uiCard.SetCard(
                 deckCard.Rank,
@@ -403,7 +467,11 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     void AISelectRandomTarget()
     {
-
+        if (GameModeManager.isOnlineMode)
+        {
+            Debug.Log("ONLINE MODE → AI handled by server");
+            return;
+        }
         if (gameOver)
             return;
 
@@ -514,6 +582,11 @@ public class GameManager : MonoBehaviour, ICardOwner
     }
     void ResolveAsk()
     {
+        if (GameModeManager.isOnlineMode)
+        {
+            Debug.Log("ONLINE MODE → ResolveAsk skipped (server handles)");
+            return;
+        }
         if (gameOver)
             return;
         Player askingPlayer = players[currentPlayer];
@@ -564,7 +637,21 @@ public class GameManager : MonoBehaviour, ICardOwner
             }
 
             // AI target → auto draw
-            Card drawn = deck.GetCard();
+            Card drawn;
+
+            if (GameModeManager.isOnlineMode)
+            {
+                int value = NetworkDeckManager.Instance.DrawCard();
+
+                if (value == -1)
+                    drawn = null;
+                else
+                    drawn = ConvertToCard(value);
+            }
+            else
+            {
+                drawn = deck.GetCard();
+            }
 
             if (drawn == null)
             {
@@ -656,8 +743,23 @@ public class GameManager : MonoBehaviour, ICardOwner
         uiPlayers[currentUIIndex].ShowAskPopup(displayName, selectedRank);
         currentTargetUI.ShowTargetPopup();
         turnActionRunning = true;
-
         Debug.Log("Human asking for rank: " + selectedRank);
+
+        if (GameModeManager.isOnlineMode)
+        {
+            if (!playerIdToClientId.ContainsKey(targetID))
+            {
+                Debug.LogError("Target ClientID not found");
+                return;
+            }
+
+            ulong targetClientId = playerIdToClientId[targetID];
+            Debug.Log("Sending RPC → Rank: " + selectedRank + " TargetClientId: " + targetClientId);
+            NetworkGameManager.Instance.RequestCardRpc(selectedRank, targetClientId);
+            //STOP LOCAL LOGIC
+            return;
+        }
+
 
         // CASE 1 — SUCCESS
         if (targetPlayer.HasRank(selectedRank))
@@ -749,7 +851,17 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         for (int i = 0; i < drawCount; i++)
         {
-            Card drawn = deck.GetCard();
+            Card drawn;
+
+            if (GameModeManager.isOnlineMode)
+            {
+                Debug.Log("ONLINE MODE → refill handled by server");
+                yield break;
+            }
+            else
+            {
+                drawn = deck.GetCard();
+            }
 
             if (drawn == null)
                 yield break;
@@ -784,8 +896,16 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
 
 
-        Card drawn = deck.GetCard();
-
+        Card drawn = null;
+        if (!GameModeManager.isOnlineMode)
+        {
+            drawn = deck.GetCard();
+        }
+        else
+        {
+            Debug.Log("ONLINE MODE → deck click ignored (server handles draw)");
+            return;
+        }
         if (drawn == null)
         {
             Debug.Log("Deck is empty. Ending game.");
@@ -962,6 +1082,11 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     IEnumerator DrawCardWithAnimation(Card drawn)
     {
+        if (GameModeManager.isOnlineMode)
+        {
+            Debug.Log("ONLINE MODE → animation draw skipped");
+            yield break;
+        }
         if (gameOver)
             yield break;
 
@@ -1323,7 +1448,16 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         Debug.Log("Human pressed GO FISH");
 
-        Card drawn = deck.GetCard();
+        Card drawn = null;
+        if (!GameModeManager.isOnlineMode)
+        {
+            drawn = deck.GetCard();
+        }
+        else
+        {
+            Debug.Log("ONLINE MODE → GoFish handled by server");
+            return;
+        }
 
         if (drawn == null)
         {
@@ -1369,7 +1503,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         // 🔥 RESET PLAYERS UI
         foreach (UIPlayer ui in uiPlayers)
         {
-          //  ui.canInteract = true;
+            //  ui.canInteract = true;
 
             // clear cards visually
             ui.RefreshHand(false); // temporary clear
@@ -1377,6 +1511,86 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         // 🔥 RESTART GAME COMPLETELY
         SetupGame();
+    }
+
+    public void ApplyPublicState(ulong[] ids, int[] scores, int[] cardCounts)
+    {
+        Debug.Log("Applying PUBLIC state");
+        for (int i = 0; i < ids.Length; i++)
+        {
+            // STEP 1: convert clientId → local playerId
+            int localId = GetLocalPlayerId(ids[i]);
+            // STEP 2: safety check
+            if (localId == -1)
+            {
+                Debug.LogWarning("Player mapping not found for clientId: " + ids[i]);
+                continue;
+            }
+            // STEP 3: update score
+            players[localId].SetScore(scores[i]);
+            // STEP 4 (optional future)
+            // players[localId].SetCardCount(cardCounts[i]);
+        }
+        // STEP 5: refresh UI
+        RefreshAllHands();
+    }
+
+    public void ApplyPrivateHand(int[] hand)
+    {
+        Debug.Log("Applying PRIVATE hand");
+        // STEP 1: find MY player id
+        int myId = GetLocalPlayerId(NetworkManager.Singleton.LocalClientId);
+
+        if (myId == -1)
+        {
+            Debug.LogError("My PlayerID not found ❌");
+            return;
+        }
+        // STEP 2: CLEAR OLD CARDS
+        players[myId].PlayerHand.Clear();
+        // STEP 3: ADD NEW CARDS
+        foreach (int value in hand)
+        {
+            players[myId].AddCard(ConvertToCard(value));
+        }
+        // STEP 4: refresh UI
+        RefreshAllHands();
+        // STEP 5: VERY IMPORTANT (fix stuck turn)
+        turnActionRunning = false;
+    }
+
+    int GetLocalPlayerId(ulong clientId)
+    {
+        foreach (var kvp in playerIdToClientId)
+        {
+            if (kvp.Value == clientId)
+                return kvp.Key;
+        }
+        return -1;
+    }
+
+    public void ApplyNetworkTurn(ulong clientId)
+    {
+        //convert clientId → local player index
+        int localId = GetLocalPlayerId(clientId);
+        //safety check
+        if (localId == -1)
+        {
+            Debug.LogError("Turn player not found ❌");
+            return;
+        }
+        //update current player
+        currentPlayer = localId;
+
+        Debug.Log("Turn applied to: " + players[localId].PlayerName);
+        //OPTIONAL UI feedback
+        if (players[localId].IsHuman)
+        {
+            if (toastUI != null)
+            {
+                toastUI.ShowToast("Your turn!");
+            }
+        }
     }
 
     public void InitializeMultiplayer()
@@ -1417,9 +1631,12 @@ public class GameManager : MonoBehaviour, ICardOwner
             );
 
             players[i] = p;
+            playerIdToClientId[i] = netPlayer.OwnerClientId;
 
             // Initialize UI
             uiPlayers[i].Initialize(p);
+            BindUIPlayer(uiPlayers[i]);
+            uiPlayers[i].RefreshHand(p.IsHuman);
         }
 
         activePlayers = new int[NetworkPlayerManager.Instance.players.Count];
@@ -1428,21 +1645,26 @@ public class GameManager : MonoBehaviour, ICardOwner
         {
             activePlayers[i] = i;
         }
-        deck = new Deck(this);
+        // deck = new Deck(this);
 
-        for (int i = 0; i < netPlayers.Count; i++)
-        {
-            foreach (var card in netPlayers[i].hand)
-            {
-                players[i].AddCard(ConvertToCard(card));
-            }
-        }
+        // for (int i = 0; i < netPlayers.Count; i++)
+        // {
+        //     StartCoroutine(SyncHands(netPlayers));
+        // }
+        // StartCoroutine(SyncHands(netPlayers));
         //Refresh all hands visually
         RefreshAllHands();
 
-        CreateDeckVisual();
+        if (cardBackPrefab == null || deckPosition == null)
+        {
+            Debug.LogError("Deck Visual references missing");
+        }
+        else
+        {
+            CreateDeckVisual();
+        }
         currentPlayer = 0;
-        StartCurrentTurn();
+        // StartCurrentTurn();
 
         // STEP 3 — Enable interaction
         foreach (UIPlayer ui in uiPlayers)
@@ -1452,6 +1674,20 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         Debug.Log("Multiplayer Setup Complete ✔");
     }
+
+    // System.Collections.IEnumerator SyncHands(List<NetworkPlayer> netPlayers)
+    // {
+    //     yield return new WaitForSeconds(0.5f); // wait for server sync
+    //     for (int i = 0; i < netPlayers.Count; i++)
+    //     {
+    //         foreach (var card in netPlayers[i].hand)
+    //         {
+    //             players[i].AddCard(ConvertToCard(card));
+    //         }
+    //     }
+    //     RefreshAllHands();
+    //     Debug.Log("Hands synced correctly");
+    // }
 
 
     void UpdateMemoryOnSuccess(int playerID, int rank)

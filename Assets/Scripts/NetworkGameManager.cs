@@ -2,6 +2,7 @@ using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 
 public class NetworkGameManager : NetworkBehaviour
 {
@@ -129,6 +130,7 @@ public class NetworkGameManager : NetworkBehaviour
     void StartGameClient()
     {
         Debug.Log("StartGameClient CALLED");
+        StartCoroutine(WaitForPlayersThenInit());
         Debug.Log("Client initializing game...");
         // STEP 1 — Find GameManager in scene
         GameManager gm = FindFirstObjectByType<GameManager>();
@@ -142,7 +144,7 @@ public class NetworkGameManager : NetworkBehaviour
         GameModeManager.isOnlineMode = true;
         Debug.Log("Calling InitializeMultiplayer");
         // STEP 2 — Initialize multiplayer setup
-        gm.InitializeMultiplayer();
+        // gm.InitializeMultiplayer();
         Debug.Log("game started client side ✔");
         // // STEP 3 — Camera check (just safety, no changes)
         // Camera cam = Camera.main;
@@ -150,6 +152,31 @@ public class NetworkGameManager : NetworkBehaviour
         // {
         //     Debug.Log("Camera ready ✔");
         // }
+    }
+
+    System.Collections.IEnumerator WaitForPlayersThenInit()
+    {
+        Debug.Log("Waiting for players to be ready...");
+        while (true)
+        {
+            if (NetworkPlayerManager.Instance != null &&
+                NetworkPlayerManager.Instance.players != null &&
+                NetworkPlayerManager.Instance.players.Count >= 2)
+            {
+                break;
+            }
+            yield return null; // wait next frame
+        }
+
+        Debug.Log("Players ready. Initializing game");
+        GameManager gm = FindFirstObjectByType<GameManager>();
+        if (gm == null)
+        {
+            Debug.LogError("GameManager NOT FOUND ❌");
+            yield break;
+        }
+        GameModeManager.isOnlineMode = true;
+        gm.InitializeMultiplayer();
     }
 
     void DealCardsToPlayers()
@@ -171,6 +198,7 @@ public class NetworkGameManager : NetworkBehaviour
         }
         Debug.Log("Total Players: " + players.Count);
         Debug.Log("Cards Dealt to All Players");
+        SendStateToClients();
     }
 
     void SetFirstTurn()
@@ -186,6 +214,16 @@ public class NetworkGameManager : NetworkBehaviour
     {
         Debug.Log("Turn Changed:" + newPlayer);
         CheckIfMyTurn(newPlayer);
+        GameManager gm=FindFirstObjectByType<GameManager>();
+        if(gm!=null)
+        {
+            gm.ApplyNetworkTurn(newPlayer);
+        }
+        else
+        {
+            Debug.Log("GameManager not found");
+        }
+
     }
 
     void CheckIfMyTurn(ulong turnPlayerId)
@@ -243,47 +281,50 @@ public class NetworkGameManager : NetworkBehaviour
 
         if (sender == null || target == null)
         {
-            Debug.LogError("Player not found ❌");
+            Debug.LogError("Player not found");
             return;
         }
         Debug.Log($"Player {senderId} asked Player {targetId} for rank {rank}");
 
-        //CHECK OPPONENT
+        //SUCCESS
         if (target.HasRank(rank))
         {
-            Debug.Log("Opponent HAS the card ✅");
             var cards = target.RemoveCardsByRank(rank);
             foreach (var card in cards)
-            {
                 sender.AddCard(card);
-            }
             Debug.Log($"Transferred {cards.Count} cards");
-            // CHECK BOOK AFTER TRANSFER
-            CheckForBook(sender);
 
-            // SAME PLAYER CONTINUES (no NextTurn)
+            //IMPORTANT ORDER
+            CheckForBook(sender);
+            // SAME PLAYER CONTINUES (NO turn change)
         }
         else
         {
-            Debug.Log("GO FISH 🎣");
+            Debug.Log("GO FISH");
             int drawnCard = NetworkDeckManager.Instance.DrawCard();
             if (drawnCard != -1)
             {
                 sender.AddCard(drawnCard);
-                Debug.Log($"Player {senderId} drew card {drawnCard}");
-
-                //CHECK BOOK AFTER DRAW
+                //IMPORTANT ORDER
                 CheckForBook(sender);
-                // 🎯 If drawn card matches → play again
+                //If same rank → play again
                 if (drawnCard == rank)
                 {
-                    Debug.Log("Drew same rank → Play again ✅");
-                    return;
+                    Debug.Log("Drawn same rank → continue turn");
+                }
+                else
+                {
+                    NextTurn();
                 }
             }
-            // Turn must pass to next player
-            NextTurn();
+            else
+            {
+                // Deck empty → still move turn
+                NextTurn();
+            }
         }
+        //FINAL STEP (ONLY ONCE)
+        SendStateToClients();
     }
 
     void CheckForBook(NetworkPlayer player)
@@ -320,5 +361,63 @@ public class NetworkGameManager : NetworkBehaviour
     {
         Debug.Log($"[ClientRpc] Player {playerId} completed book of rank {rank} | Score: {score}");
         // Update UI or other client-side elements here
+    }
+
+    [ClientRpc]
+    void SyncPublicStateClientRpc(ulong[] ids, int[] scores, int[] cardCounts)
+    {
+        Debug.Log("SyncPublicStateClientRpc RECEIVED");
+        GameManager gm = FindFirstObjectByType<GameManager>();
+
+        if (gm == null)
+        {
+            Debug.LogError("GameManager not found ❌");
+            return;
+        }
+        gm.ApplyPublicState(ids, scores, cardCounts);
+    }
+
+    void SendStateToClients()
+    {
+        var players = NetworkPlayerManager.Instance.players;
+        int count = players.Count;
+
+        ulong[] ids = new ulong[count];
+        int[] scores = new int[count];
+        int[] cardCounts = new int[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            ids[i] = players[i].OwnerClientId;
+            scores[i] = players[i].score.Value;
+            cardCounts[i] = players[i].hand.Count;
+        }
+        // send public info to all
+        SyncPublicStateClientRpc(ids, scores, cardCounts);
+        // send private hands individually
+        foreach (var p in players)
+        {
+            int[] hand = p.hand.ToArray();
+            ClientRpcParams sendTo = new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { p.OwnerClientId }
+                }
+            };
+            SyncPrivateHandClientRpc(hand, sendTo);
+        }
+    }
+
+    [ClientRpc]
+    void SyncPrivateHandClientRpc(int[] hand, ClientRpcParams rpcParams = default)
+    {
+        GameManager gm = FindFirstObjectByType<GameManager>();
+        if (gm == null)
+        {
+            Debug.LogError("GameManager not found ❌");
+            return;
+        }
+        gm.ApplyPrivateHand(hand);
     }
 }

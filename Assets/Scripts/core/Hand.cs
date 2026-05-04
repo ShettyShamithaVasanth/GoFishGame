@@ -14,6 +14,10 @@ public class Hand
     {
         cards.Remove(card);
     }
+    public void Clear()
+    {
+        Cards.Clear();
+    }
 
     public int Count()
     {

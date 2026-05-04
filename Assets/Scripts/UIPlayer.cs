@@ -17,7 +17,7 @@ public class UIPlayer : MonoBehaviour, ICardOwner
     [Header("Cards")]
     public Transform cardHolder;
     public GameObject cardPrefab;
-    // public CardData cardData;
+    public CardData cardData;
 
     [Header("Turn Animation")]
     public Transform profileAnim;
@@ -34,52 +34,33 @@ public class UIPlayer : MonoBehaviour, ICardOwner
     public AvatarDatabase avatarDatabase;
     private Player playerInstance;
     private List<GameObject> spawnedCards = new List<GameObject>();
+    public event System.Action<UIPlayer, int> OnTargetClicked;
+    public event System.Action<UIPlayer, int> OnRankSelected;
 
     public void Initialize(Player player)
     {
 
+        if (playerInstance != null)
+            playerInstance.OnTurnChanged -= HandleTurnChanged;
+
         playerInstance = player;
         // 🔥 HUMAN PLAYER USES PROFILE DATA
-        if (player.IsHuman)
+        nameLabel.text = player.PlayerName;
+
+        if (profilePhoto != null)
         {
-            nameLabel.text = ProfileData.PlayerName;
+            int index = player.AvatarIndex;
 
-            if (profilePhoto != null)
+            if (avatarDatabase != null &&
+                avatarDatabase.avatarSprites != null &&
+                index >= 0 &&
+                index < avatarDatabase.avatarSprites.Length)
             {
-                int index = ProfileData.PlayerAvatarIndex;
-
-                if (avatarDatabase != null &&
-                    avatarDatabase.avatarSprites != null &&
-                    index >= 0 &&
-                    index < avatarDatabase.avatarSprites.Length)
-                {
-                    profilePhoto.sprite = avatarDatabase.avatarSprites[index];
-                }
+                profilePhoto.sprite = avatarDatabase.avatarSprites[index];
             }
         }
-        else
-        {
-            nameLabel.text = player.PlayerName;
 
-            if (profilePhoto != null)
-            {
-                NetworkPlayer netPlayer = GetComponent<NetworkPlayer>();
-
-                if (netPlayer != null)
-                {
-                    int index = netPlayer.avatarIndex.Value;
-
-                    if (avatarDatabase != null &&
-                        avatarDatabase.avatarSprites != null &&
-                        index >= 0 &&
-                        index < avatarDatabase.avatarSprites.Length)
-                    {
-                        profilePhoto.sprite = avatarDatabase.avatarSprites[index];
-                    }
-                }
-            }
-            Debug.Log("NETWORK AVATAR APPLIED: " + player.PlayerName);
-        }
+        Debug.Log("UI PLAYER INITIALIZED: " + player.PlayerName);
         // Subscribe to turn event
         playerInstance.OnTurnChanged += HandleTurnChanged;
         StopTurnAnimation();
@@ -94,7 +75,7 @@ public class UIPlayer : MonoBehaviour, ICardOwner
 
     void Start()
     {
-      //  canInteract = false;
+        //  canInteract = false;
     }
     public void UpdateScore(int newScore)
     {
@@ -170,6 +151,12 @@ public class UIPlayer : MonoBehaviour, ICardOwner
         Debug.Log($"Refreshing {playerInstance.PlayerName}'s hand. Count: {playerInstance.PlayerHand.Cards.Count}, Show Front: {showFront}", gameObject);
         ClearVisualCards();
 
+        if (cardData == null)
+        {
+            Debug.LogError("UIPlayer cardData is missing", gameObject);
+            return;
+        }
+
         int index = 0;
 
         foreach (Card card in playerInstance.PlayerHand.Cards)
@@ -197,7 +184,7 @@ public class UIPlayer : MonoBehaviour, ICardOwner
 
             UICard uiCard = newCard.GetComponent<UICard>();
 
-            uiCard.cardData = FindFirstObjectByType<GameManager>().cardData;
+            uiCard.cardData = cardData;
 
             uiCard.SetCard(
                 card.Rank,
@@ -271,11 +258,6 @@ public class UIPlayer : MonoBehaviour, ICardOwner
         if (!canInteract)
             return;
 
-        GameManager gm = FindFirstObjectByType<GameManager>();
-
-        if (gm == null || !gm.GetCurrentPlayer().IsHuman)
-            return;
-
         Vector2 worldPos = Camera.main.ScreenToWorldPoint(screenPos);
 
         RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
@@ -284,22 +266,12 @@ public class UIPlayer : MonoBehaviour, ICardOwner
         {
             Debug.Log("Player Clicked");
 
-            gm.HumanSelectTarget(playerInstance.PlayerID);
+            OnTargetClicked?.Invoke(this, playerInstance.PlayerID);
         }
     }
 
     public void OnCardSelected(int rank, UICard clickedCard)
     {
-        GameManager gm = FindFirstObjectByType<GameManager>();
-
-        // Only allow if it's human turn
-        if (!gm.GetCurrentPlayer().IsHuman)
-            return;
-
-        // Only allow selecting own cards
-        if (playerInstance.PlayerID != gm.GetCurrentPlayer().PlayerID)
-            return;
-
         // Remove previous highlight
         if (selectedCard != null)
             selectedCard.transform.localScale = Vector3.one;
@@ -307,14 +279,8 @@ public class UIPlayer : MonoBehaviour, ICardOwner
         selectedCard = clickedCard;
         // Simple highlight effect
         selectedCard.transform.localScale = Vector3.one * 1.2f;
-        StartCoroutine(DelayedSelect(rank, gm));
-        // gm.SetSelectedRank(rank);
+        OnRankSelected?.Invoke(this, rank);
 
-    }
-    IEnumerator DelayedSelect(int rank, GameManager gm)
-    {
-        yield return null; // wait 1 frame
-        gm.SetSelectedRank(rank);
     }
     public void ClearCardSelection()
     {

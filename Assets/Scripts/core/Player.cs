@@ -49,6 +49,10 @@ public class Player
     {
         PlayerHand.RemoveCard(card);
     }
+    public void SetScore(int value)
+    {
+        Score = value;
+    }
 
     public int CardCount()
     {
