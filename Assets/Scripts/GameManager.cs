@@ -1528,8 +1528,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             }
             // STEP 3: update score
             players[localId].SetScore(scores[i]);
-            // STEP 4 (optional future)
-            // players[localId].SetCardCount(cardCounts[i]);
+            players[localId].SetPublicCardCount(cardCounts[i]);
         }
         // STEP 5: refresh UI
         RefreshAllHands();
@@ -1576,15 +1575,21 @@ public class GameManager : MonoBehaviour, ICardOwner
         //safety check
         if (localId == -1)
         {
-            Debug.LogError("Turn player not found ❌");
+            Debug.LogError("Turn player not found");
             return;
         }
-        //update current player
-        currentPlayer = localId;
 
-        Debug.Log("Turn applied to: " + players[localId].PlayerName);
+        if(players !=null && currentPlayer<players.Length){
+            players[currentPlayer].EndTurn();
+        }
+        //update current player
+        currentPlayer = newPlayer;
+        // start new player turn
+        players[currentPlayer].StartTurn();
+
+        Debug.Log("Turn applied to: " + players[currentPlayer].PlayerName);
         //OPTIONAL UI feedback
-        if (players[localId].IsHuman)
+        if (players[currentPlayer].IsHuman)
         {
             if (toastUI != null)
             {

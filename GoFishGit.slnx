@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="PlayFab.csproj" />
+  <Project Path="PlayFabEditorExtensions.csproj" />
+  <Project Path="Assembly-CSharp-firstpass.csproj" />
+  <Project Path="PlayFabSDKEditor.csproj" />
+  <Project Path="Sirenix.OdinInspector.Modules.UnityMathematics.csproj" />
+</Solution>

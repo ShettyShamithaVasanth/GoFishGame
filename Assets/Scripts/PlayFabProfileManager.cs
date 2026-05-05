@@ -12,7 +12,7 @@ public class PlayFabProfileManager : MonoBehaviour
         Instance = this;
     }
 
-    // 🔥 SAVE PROFILE TO CLOUD
+    //SAVE PROFILE TO CLOUD
     public void SaveProfile(string name, int avatarIndex)
     {
         var data = new Dictionary<string, string>()
@@ -20,7 +20,7 @@ public class PlayFabProfileManager : MonoBehaviour
     { "PlayerName", name },
     { "AvatarIndex", avatarIndex.ToString() },
 
-    // ⭐ NEW STATS
+    //NEW STATS
     { "GamesPlayed", ProfileData.GamesPlayed.ToString() },
     { "GamesWon", ProfileData.GamesWon.ToString() }
 };
@@ -31,16 +31,16 @@ public class PlayFabProfileManager : MonoBehaviour
         };
 
         PlayFabClientAPI.UpdateUserData(request,
-            result => Debug.Log("✅ Cloud Save SUCCESS"),
-            error => Debug.LogError("❌ Cloud Save FAILED"));
+            result => Debug.Log("Cloud Save SUCCESS"),
+            error => Debug.LogError("Cloud Save FAILED"));
     }
 
-    // 🔥 LOAD PROFILE FROM CLOUD
+    //LOAD PROFILE FROM CLOUD
     public void LoadProfile()
     {
         if (!PlayFabClientAPI.IsClientLoggedIn())
         {
-            Debug.LogWarning("⚠️ Not logged in yet. Skipping LoadProfile.");
+            Debug.LogWarning("Not logged in yet. Skipping LoadProfile.");
             return;
         }
         PlayFabClientAPI.GetUserData(new GetUserDataRequest(),
@@ -48,7 +48,7 @@ public class PlayFabProfileManager : MonoBehaviour
         {
             if (result.Data != null && result.Data.ContainsKey("PlayerName"))
             {
-                // ⭐ LOAD STATS (SAFE CHECK)
+                //LOAD STATS (SAFE CHECK)
                 if (result.Data.ContainsKey("GamesPlayed"))
                     ProfileData.GamesPlayed = int.Parse(result.Data["GamesPlayed"].Value);
 
@@ -57,12 +57,12 @@ public class PlayFabProfileManager : MonoBehaviour
                 string name = result.Data["PlayerName"].Value;
                 int avatarIndex = int.Parse(result.Data["AvatarIndex"].Value);
 
-                Debug.Log("✅ Cloud Data Loaded");
+                Debug.Log("Cloud Data Loaded");
 
-                // 🔥 UPDATE GLOBAL DATA
+                // UPDATE GLOBAL DATA
                 ProfileData.PlayerName = name;
 
-                // 🔥 APPLY AVATAR FROM MENU LIST
+                //APPLY AVATAR FROM MENU LIST
                 var menu = FindFirstObjectByType<MainMenuProfileController>();
 
                 if (menu != null && menu.avatarImages.Count > avatarIndex)
@@ -70,10 +70,10 @@ public class PlayFabProfileManager : MonoBehaviour
                     ProfileData.PlayerAvatarIndex = avatarIndex;
                 }
 
-                // 🔥 UPDATE UI
+                //UPDATE UI
                 if (menu != null)
                 {
-                    menu.UpdateUI(); // ⭐ SINGLE SOURCE UPDATE
+                    menu.UpdateUI(); //SINGLE SOURCE UPDATE
                 }
             }
             else
@@ -81,7 +81,7 @@ public class PlayFabProfileManager : MonoBehaviour
                 Debug.Log("No cloud data found (first time user)");
             }
         },
-        error => Debug.LogError("❌ Cloud Load FAILED"));
+        error => Debug.LogError("Cloud Load FAILED"));
 
     }
 }

@@ -159,10 +159,22 @@ public class UIPlayer : MonoBehaviour, ICardOwner
 
         int index = 0;
 
-        foreach (Card card in playerInstance.PlayerHand.Cards)
+        int cardCount=playerInstance.IsHuman? playerInstance.PlayerHand.Cards.Count:
+        (GameModeManager.isOnlineMode? playerInstance.GetPublicCardCount():
+        playerInstance.PlayerHand.Cards.Count);
+        for(int i=0;i<cardcopunt;i++)
         {
+            Card card;
+            // real cards
+            if(playerInstance.IsHuman || !GameModeManager.isOnlineMode){
+                card=PlayerInstance.PlayerHand.Cards[i];
+            }
+            else{
+                // opponent fake cards
+                card=new card(0,CardSuit.Clubs);
+            }
             GameObject newCard = Instantiate(cardPrefab, cardHolder);
-
+       
             int cardCount = playerInstance.PlayerHand.Cards.Count;
 
             float maxWidth = 7f;          // total width allowed for hand
@@ -195,7 +207,8 @@ public class UIPlayer : MonoBehaviour, ICardOwner
             );  // Higher sorting order for later cards
 
             // uiCard.ShowFront(showFront);
-
+            bool shouldShowfront=playerInstance.IsHuman || !GameModeManager.isOnlineMode;
+            uiCard.ShowFront(shouldShowfront);
             spawnedCards.Add(newCard);
             index++;
         }

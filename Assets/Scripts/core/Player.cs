@@ -10,6 +10,7 @@ public class Player
     public int AvatarIndex;
     public int Score { get; private set; } = 0;
     public int LastBookTurn = int.MaxValue;
+    // private int publicCardCount=0;
 
     public bool IsMyTurn { get; private set; }
 
@@ -84,4 +85,11 @@ public class Player
     {
         Score++;
     }
+
+    // public void SetPublicCardCount(int count){
+    //     publicCardCount=count;
+    // }
+    // public void GetPublicCardCount(){
+    //     return publicCardCount;
+    // }
 }
