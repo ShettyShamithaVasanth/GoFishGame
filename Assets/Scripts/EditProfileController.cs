@@ -97,6 +97,7 @@ public class EditProfileController : MonoBehaviour
         CloseEditProfile(); // go back to stats panel
     }
 
+    [System.Obsolete]
     public void ConfirmFinalSave()
     {
         Debug.Log("Final Save Confirmed");
@@ -117,7 +118,7 @@ public class EditProfileController : MonoBehaviour
         menuBackground.SetActive(true);
 
         // ⭐ FORCE UI REFRESH AFTER SAVE
-        var menu = FindFirstObjectByType<MainMenuProfileController>();
+        var menu = FindAnyObjectByType<MainMenuProfileController>();
         if (menu != null)
         {
             menu.UpdateUI();

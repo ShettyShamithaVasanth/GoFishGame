@@ -2,16 +2,19 @@ using UnityEngine;
 
 public class DeckClickHandler : MonoBehaviour
 {
+    [System.Obsolete]
     private void OnEnable()
     {
         InputHandler.OnClick += HandleClick;
     }
 
+    [System.Obsolete]
     private void OnDisable()
     {
         InputHandler.OnClick -= HandleClick;
     }
 
+    [System.Obsolete]
     void HandleClick(Vector2 screenPos)
     {
         if (Camera.main == null)
@@ -28,7 +31,7 @@ public class DeckClickHandler : MonoBehaviour
         {
             Debug.Log("Deck Clicked");
 
-            GameManager gm = FindFirstObjectByType<GameManager>();
+            GameManager gm = FindAnyObjectByType<GameManager>();
 
             if (gm == null)
             {

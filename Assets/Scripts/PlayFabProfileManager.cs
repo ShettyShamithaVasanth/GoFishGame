@@ -36,6 +36,7 @@ public class PlayFabProfileManager : MonoBehaviour
     }
 
     //LOAD PROFILE FROM CLOUD
+    [System.Obsolete]
     public void LoadProfile()
     {
         if (!PlayFabClientAPI.IsClientLoggedIn())
@@ -63,7 +64,7 @@ public class PlayFabProfileManager : MonoBehaviour
                 ProfileData.PlayerName = name;
 
                 //APPLY AVATAR FROM MENU LIST
-                var menu = FindFirstObjectByType<MainMenuProfileController>();
+                var menu = FindAnyObjectByType<MainMenuProfileController>();
 
                 if (menu != null && menu.avatarImages.Count > avatarIndex)
                 {

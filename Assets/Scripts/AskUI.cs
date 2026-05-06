@@ -3,7 +3,8 @@ using Unity.Netcode;
 
 public class AskUI : MonoBehaviour
 {
-   public void AskTest()
+    [System.Obsolete]
+    public void AskTest()
     {
         ulong myId= NetworkManager.Singleton.LocalClientId;
         // Temporary :choose opponent

@@ -77,6 +77,8 @@ public class GameManager : MonoBehaviour, ICardOwner
     new AIProfile { name = "Noah", avatarIndex = 8 },
     new AIProfile { name = "David", avatarIndex = 9 }
 };
+    // private int newPlayer;
+
     // ⭐ tracks if the last deck card was drawn
     // private bool lastDeckCardDrawn = false;
 
@@ -1579,11 +1581,14 @@ public class GameManager : MonoBehaviour, ICardOwner
             return;
         }
 
-        if(players !=null && currentPlayer<players.Length){
+        if (players != null &&
+        currentPlayer >= 0 &&
+        currentPlayer < players.Length &&
+        players[currentPlayer] != null){
             players[currentPlayer].EndTurn();
         }
         //update current player
-        currentPlayer = newPlayer;
+        currentPlayer = localId;
         // start new player turn
         players[currentPlayer].StartTurn();
 
@@ -1608,7 +1613,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         // Safety
         if (NetworkPlayerManager.Instance == null)
         {
-            Debug.LogError("NetworkPlayerManager missing ❌");
+            Debug.LogError("NetworkPlayerManager missing");
             return;
         }
 
@@ -1616,7 +1621,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         if (netPlayers == null || netPlayers.Count == 0)
         {
-            Debug.LogError("No network players found ❌");
+            Debug.LogError("No network players found");
             return;
         }
 

@@ -51,6 +51,14 @@ public class UICard : MonoBehaviour
         }
         cardRank = rank;
         owner = ownerPlayer;
+        // Hidden opponent card
+        if (rank <= 0)
+        {
+            rankTop.text = "";
+            rankBottom.text = "";
+            suitRenderer.enabled = false;
+            return;
+        }
 
         string rankString = cardData.GetRankString(rank);
 
@@ -66,22 +74,15 @@ public class UICard : MonoBehaviour
     {
         if (cardFront == null || cardBack == null)
         {
-            Debug.LogError("CardFront or CardBack not assigned!");
+            Debug.LogError("CardFront or CardBack missing!");
             return;
         }
 
-        // ⭐ HARD FORCE (no flicker possible)
+        // FRONT = visible for human
         cardFront.SetActive(show);
+
+        // BACK = visible for AI/opponents
         cardBack.SetActive(!show);
-
-        // ⭐ EXTRA SAFETY — disable renderers manually
-        SpriteRenderer[] frontRenderers = cardFront.GetComponentsInChildren<SpriteRenderer>(true);
-        foreach (var r in frontRenderers)
-            r.enabled = show;
-
-        SpriteRenderer[] backRenderers = cardBack.GetComponentsInChildren<SpriteRenderer>(true);
-        foreach (var r in backRenderers)
-            r.enabled = !show;
     }
 
     private void OnEnable()

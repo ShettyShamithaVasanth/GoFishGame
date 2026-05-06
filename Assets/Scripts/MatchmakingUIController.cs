@@ -17,6 +17,7 @@ public class MatchmakingUIController : MonoBehaviour
         Instance = this;
     }
 
+    [System.Obsolete]
     public void StartSearching()
     {
         panel.SetActive(true);
@@ -25,6 +26,7 @@ public class MatchmakingUIController : MonoBehaviour
         StartCoroutine(SearchTimer());
     }
 
+    [System.Obsolete]
     IEnumerator SearchTimer()
     {
         while (timer > 0 && searching)
@@ -40,6 +42,8 @@ public class MatchmakingUIController : MonoBehaviour
             StartCoroutine(HandleNoPlayersFound());
         }
     }
+
+    [System.Obsolete]
     IEnumerator HandleNoPlayersFound()
     {
         searching = false;
@@ -48,7 +52,7 @@ public class MatchmakingUIController : MonoBehaviour
         // hide matchmaking panel
         panel.SetActive(false);
         // open mode selection panel
-        var menu = FindFirstObjectByType<MenuController>();
+        var menu = FindAnyObjectByType<MenuController>();
 
         if (menu != null)
         {
@@ -69,6 +73,8 @@ public class MatchmakingUIController : MonoBehaviour
         searching = false;
         panel.SetActive(false);
     }
+
+    [System.Obsolete]
     public void OnCancelClicked()
     {
         Debug.Log("Matchmaking cancelled by user");
@@ -76,7 +82,7 @@ public class MatchmakingUIController : MonoBehaviour
         // Resst mode
         GameModeManager.isOnlineMode = false;
         // go back to menu scene
-        var menu = FindFirstObjectByType<MenuController>();
+        var menu = FindAnyObjectByType<MenuController>();
         if (menu != null)
         {
             menu.MenuUI.SetActive(true);

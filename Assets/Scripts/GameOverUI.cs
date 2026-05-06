@@ -22,8 +22,8 @@ public class GameOverUI : MonoBehaviour
 
         // sort players by score (highest first)
         var sortedPlayers = players
-    .OrderByDescending(p => p.Score)          // ⭐ main: score
-    .ThenBy(p => p.LastBookTurn)              // ⭐ tie-break: earlier book wins
+    .OrderByDescending(p => p.Score)         
+    .ThenBy(p => p.LastBookTurn)              
     .Take(activePlayers)
     .ToArray();
 
@@ -65,6 +65,7 @@ public class GameOverUI : MonoBehaviour
         }
     }
 
+    [System.Obsolete]
     public void PlayAgain()
     {
         Debug.Log("PLAY AGAIN BUTTON PRESSED");
@@ -73,7 +74,7 @@ public class GameOverUI : MonoBehaviour
         gameOverPanel.SetActive(false);
 
         // 🔥 Find GameManager and restart game
-        GameManager gm = FindFirstObjectByType<GameManager>();
+        GameManager gm = FindAnyObjectByType<GameManager>();
 
         if (gm != null)
         {

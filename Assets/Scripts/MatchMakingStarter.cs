@@ -4,6 +4,7 @@ public class MatchmakingStarter : MonoBehaviour
 {
     public PlayerProfileUI myProfileUI;
 
+    [System.Obsolete]
     void Start()
     {
         // if not online mode, do nothing
