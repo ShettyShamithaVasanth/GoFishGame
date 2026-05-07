@@ -134,7 +134,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         aiMemory = new AIMemory();
 
         // 1️⃣ Create Deck
-        deck = new Deck(this);
+        deck = new Deck();
         deck.Shuffle();
 
         // 2️⃣ Create ALL 4 players (fixed positions)
@@ -420,14 +420,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         players[currentPlayer].EndTurn();
         askedRankTargetThisTurn.Clear();
         // Move to next in custom order
-        int currentIndex = System.Array.IndexOf(activePlayers, currentPlayer);
-
-        currentIndex++;
-
-        if (currentIndex >= activePlayers.Length)
-            currentIndex = 0;
-
-        currentPlayer = activePlayers[currentIndex];
+        currentPlayer = GameRules.GetNextPlayer(activePlayers, currentPlayer);
         // Start next
         // waitingForNextTurnButton = true;
         // Debug.Log("Turn ended. Waiting for NextTurn button.");
@@ -517,7 +510,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
 
         // ✅ STEP 2 — GET SORTED RANKS
-        List<int> sortedRanks = GetSortedRanks(aiCards);
+        List<int> sortedRanks = AIStrategy.GetSortedRanks(aiMemory, aiCards, completedRanks, currentPlayer, players);
 
         bool foundValidMove = false;
 
@@ -525,12 +518,12 @@ public class GameManager : MonoBehaviour, ICardOwner
         {
             selectedRank = rank;
 
-            if (!PlayerHasRankInHand(currentPlayer, selectedRank))
+            if (!AIStrategy.PlayerHasRankInHand(players[currentPlayer], selectedRank))
                 continue;
 
-            int tempTarget = SelectBestTarget(possibleTargets, selectedRank);
+            int tempTarget = AIStrategy.SelectBestTarget(aiMemory, possibleTargets, selectedRank, currentPlayer, askedRankTargetThisTurn, players);
 
-            if (!AlreadyAskedThisTurn(tempTarget, selectedRank))
+            if (!AIStrategy.AlreadyAskedThisTurn(askedRankTargetThisTurn, tempTarget, selectedRank))
             {
                 foundValidMove = true;
                 break;
@@ -552,7 +545,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             return;
         }
 
-        if (!PlayerHasRankInHand(currentPlayer, selectedRank))
+        if (!AIStrategy.PlayerHasRankInHand(players[currentPlayer], selectedRank))
         {
             Invoke(nameof(AISelectRandomTarget), 2.2f);
             return;
@@ -561,7 +554,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         Debug.Log(aiPlayer.PlayerName + " asking for rank " + selectedRank);
 
         // ✅ FINAL TARGET SELECT
-        int randomTarget = SelectBestTarget(possibleTargets, selectedRank);
+        int randomTarget = AIStrategy.SelectBestTarget(aiMemory, possibleTargets, selectedRank, currentPlayer, askedRankTargetThisTurn, players);
 
         int targetUIIndex = GetUIIndex(randomTarget);
         currentTargetUI = uiPlayers[targetUIIndex];
@@ -716,7 +709,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         Player targetPlayer = players[targetID];
 
         // ⭐ prevent asking rank if player no longer has it (book already formed)
-        if (!PlayerHasRankInHand(currentPlayer, selectedRank))
+        if (!AIStrategy.PlayerHasRankInHand(players[currentPlayer], selectedRank))
         {
             Debug.Log("Cannot ask for this rank. You no longer have it in hand.");
             return;
@@ -725,7 +718,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         // ⭐ prevent asking same rank to same player in same turn
         string key = targetID + "_" + selectedRank;
 
-        if (AlreadyAskedThisTurn(targetID, selectedRank))
+        if (AIStrategy.AlreadyAskedThisTurn(askedRankTargetThisTurn, targetID, selectedRank))
         {
             Debug.Log("You already asked this player for this rank this turn.");
             return;
@@ -820,22 +813,22 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
     }
     // ⭐ check if player still has the rank in hand
-    bool PlayerHasRankInHand(int playerID, int rank)
-    {
-        foreach (Card c in players[playerID].PlayerHand.Cards)
-        {
-            if (c.Rank == rank)
-                return true;
-        }
+    // bool PlayerHasRankInHand(int playerID, int rank)
+    // {
+    //     foreach (Card c in players[playerID].PlayerHand.Cards)
+    //     {
+    //         if (c.Rank == rank)
+    //             return true;
+    //     }
 
-        return false;
-    }
+    //     return false;
+    // }
     // ⭐ check if this player already asked this target for this rank this turn
-    bool AlreadyAskedThisTurn(int targetID, int rank)
-    {
-        string key = targetID + "_" + rank;
-        return askedRankTargetThisTurn.Contains(key);
-    }
+    // bool AlreadyAskedThisTurn(int targetID, int rank)
+    // {
+    //     string key = targetID + "_" + rank;
+    //     return askedRankTargetThisTurn.Contains(key);
+    // }
 
     // ⭐ refill player hand if empty after forming a book
     IEnumerator RefillHandIfEmpty(int playerID)
@@ -1255,47 +1248,46 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     void CheckForBook(int playerID)
     {
-        Player player = players[playerID];
+        var result = GameRules.CheckForBook(players[playerID]);
 
-        Dictionary<int, List<Card>> rankGroups = new Dictionary<int, List<Card>>();
+        if (result == null)
+            return;
 
-        foreach (Card card in player.PlayerHand.Cards)
+        int rank = result.Value.rank;
+        List<Card> cards = result.Value.cards;
+
+        Debug.Log(players[playerID].PlayerName +
+                  " completed a BOOK of rank " + rank);
+
+        // ⭐ TOAST — BOOK STARTING
+        if (toastUI != null)
         {
-            if (!rankGroups.ContainsKey(card.Rank))
-                rankGroups[card.Rank] = new List<Card>();
-
-            rankGroups[card.Rank].Add(card);
+            if (players[playerID].IsHuman)
+            {
+                toastUI.ShowToast("Book forming...");
+            }
         }
 
-        foreach (var group in rankGroups)
+        completedRanks.Add(rank);
+
+        // ⭐ prevent asking this rank again
+        if (selectedRank == rank)
         {
-            if (group.Value.Count == 4)
-            {
-                Debug.Log(player.PlayerName + " completed a BOOK of rank " + group.Key);
-                // ⭐ TOAST — BOOK STARTING
-                if (toastUI != null)
-                {
-                    if (players[playerID].IsHuman)
-                        toastUI.ShowToast("Book forming...");
-                }
-                completedRanks.Add(group.Key);
-                // ⭐ prevent asking this rank again
-                if (selectedRank == group.Key)
-                    selectedRank = -1;
+            selectedRank = -1;
+        }
 
-                aiMemory.ClearRank(group.Key);
-                bookJustFormed = true; // 🔥 mark that book happened
-                StartCoroutine(HandleBook(playerID, group.Key, group.Value));
+        aiMemory.ClearRank(rank);
 
-                // ⭐ if deck already empty when book formed → end game
-                if (deck.CardCount() == 0)
-                {
-                    Debug.Log("Book formed with last deck card. Ending game.");
-                    StartCoroutine(EndGameAfterDelay());
-                }
-                break;
-            }
+        bookJustFormed = true;
 
+        StartCoroutine(HandleBook(playerID, rank, cards));
+
+        // ⭐ if deck already empty when book formed → end game
+        if (deck.CardCount() == 0)
+        {
+            Debug.Log("Book formed with last deck card. Ending game.");
+
+            StartCoroutine(EndGameAfterDelay());
         }
     }
 
@@ -1402,15 +1394,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             ui.canInteract = false;
         }
         // ⭐ STEP 2 — FIND WINNER
-        Player winner = players[0];
-
-        foreach (Player p in players)
-        {
-            if (p.Score > winner.Score)
-            {
-                winner = p;
-            }
-        }
+        Player winner = GameRules.GetWinner(players);
 
         // ⭐ STEP 3 — IF HUMAN WON → INCREASE
         if (winner.IsHuman)
@@ -1511,6 +1495,13 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         // 🔥 RESTART GAME COMPLETELY
         SetupGame();
+    }
+
+    public void PlayAgain()
+    {
+        if (gameOverUI != null)
+            gameOverUI.HidePanel();
+        RestartGame();
     }
 
     public void ApplyPublicState(ulong[] ids, int[] scores, int[] cardCounts)
@@ -1709,75 +1700,75 @@ public class GameManager : MonoBehaviour, ICardOwner
         aiMemory.AddConfidence(currentPlayer, rank, 2f);
     }
 
-    int SelectBestTarget(List<int> possibleTargets, int rank)
-    {
-        int bestTarget = -1;
-        float bestScore = float.MinValue;
+    // int SelectBestTarget(List<int> possibleTargets, int rank)
+    // {
+    //     int bestTarget = -1;
+    //     float bestScore = float.MinValue;
 
-        foreach (int target in possibleTargets)
-        {
-            if (AlreadyAskedThisTurn(target, rank))
-                continue;
+    //     foreach (int target in possibleTargets)
+    //     {
+    //         if (AlreadyAskedThisTurn(target, rank))
+    //             continue;
 
-            float memoryScore = aiMemory.GetConfidence(target, rank);
-            // ⭐ STEP 4 ADD HERE (VERY IMPORTANT)
-            if (PlayerHasRankInHand(currentPlayer, rank))
-            {
-                memoryScore += 2f; // AI prefers ranks it owns
-            }
+    //         float memoryScore = aiMemory.GetConfidence(target, rank);
+    //         // ⭐ STEP 4 ADD HERE (VERY IMPORTANT)
+    //         if (PlayerHasRankInHand(currentPlayer, rank))
+    //         {
+    //             memoryScore += 2f; // AI prefers ranks it owns
+    //         }
 
-            float randomFactor = Random.Range(0f, 1f);
+    //         float randomFactor = Random.Range(0f, 1f);
 
-            float totalScore = (memoryScore * 0.8f) + (randomFactor * 0.2f);
+    //         float totalScore = (memoryScore * 0.8f) + (randomFactor * 0.2f);
 
-            if (totalScore > bestScore)
-            {
-                bestScore = totalScore;
-                bestTarget = target;
-            }
-        }
+    //         if (totalScore > bestScore)
+    //         {
+    //             bestScore = totalScore;
+    //             bestTarget = target;
+    //         }
+    //     }
 
-        // fallback
-        if (bestTarget == -1 && possibleTargets.Count > 0)
-        {
-            bestTarget = possibleTargets[Random.Range(0, possibleTargets.Count)];
-        }
+    //     // fallback
+    //     if (bestTarget == -1 && possibleTargets.Count > 0)
+    //     {
+    //         bestTarget = possibleTargets[Random.Range(0, possibleTargets.Count)];
+    //     }
 
-        return bestTarget;
-    }
+    //     return bestTarget;
+    // }
 
-    List<int> GetSortedRanks(List<Card> aiCards)
-    {
-        Dictionary<int, float> rankScores = new Dictionary<int, float>();
+    // List<int> GetSortedRanks(List<Card> aiCards)
+    // {
+    //     Dictionary<int, float> rankScores = new Dictionary<int, float>();
 
-        foreach (Card c in aiCards)
-        {
-            int rank = c.Rank;
+    //     foreach (Card c in aiCards)
+    //     {
+    //         int rank = c.Rank;
 
-            if (completedRanks.Contains(rank))
-                continue;
+    //         if (completedRanks.Contains(rank))
+    //             continue;
 
-            if (!rankScores.ContainsKey(rank))
-                rankScores[rank] = 0f;
+    //         if (!rankScores.ContainsKey(rank))
+    //             rankScores[rank] = 0f;
 
-            // memory score
-            for (int i = 0; i < players.Length; i++)
-            {
-                if (i == currentPlayer) continue;
-                rankScores[rank] += aiMemory.GetConfidence(i, rank);
-            }
+    //         // memory score
+    //         for (int i = 0; i < players.Length; i++)
+    //         {
+    //             if (i == currentPlayer) continue;
+    //             rankScores[rank] += aiMemory.GetConfidence(i, rank);
+    //         }
 
-            // count bonus
-            int count = aiCards.FindAll(x => x.Rank == rank).Count;
-            rankScores[rank] += count * 1.5f;
-        }
+    //         // count bonus
+    //         int count = aiCards.FindAll(x => x.Rank == rank).Count;
+    //         rankScores[rank] += count * 1.5f;
+    //     }
 
-        // sort ranks by score (highest first)
-        List<int> sortedRanks = new List<int>(rankScores.Keys);
-        sortedRanks.Sort((a, b) => rankScores[b].CompareTo(rankScores[a]));
+    //     // sort ranks by score (highest first)
+    //     List<int> sortedRanks = new List<int>(rankScores.Keys);
+    //     sortedRanks.Sort((a, b) => rankScores[b].CompareTo(rankScores[a]));
 
-        return sortedRanks;
-    }
+    //     return sortedRanks;
+    // }
 
     Card ConvertToCard(int value)
     {

@@ -1,4 +1,4 @@
-using UnityEngine;
+// using UnityEngine;
 using System.Collections.Generic;
 [System.Serializable]
 public class Player
@@ -29,7 +29,7 @@ public class Player
 
         OnTurnChanged?.Invoke(this, true);
 
-        Debug.Log(PlayerName + " Turn Started");
+        System.Diagnostics.Debug.WriteLine(PlayerName + " Turn Started");
     }
 
     public void EndTurn()
@@ -38,7 +38,7 @@ public class Player
 
         OnTurnChanged?.Invoke(this, false);
 
-        Debug.Log(PlayerName + " Turn Ended");
+        System.Diagnostics.Debug.WriteLine(PlayerName + " Turn Ended");
     }
 
     public void AddCard(Card card)

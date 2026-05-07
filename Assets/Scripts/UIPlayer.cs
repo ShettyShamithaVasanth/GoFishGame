@@ -288,7 +288,7 @@ public class UIPlayer : MonoBehaviour, ICardOwner
     }
 
     public void ShowAskPopup(string targetName, int rank)
-    {
+    { 
         if (popup1 != null)
             popup1.SetActive(true);
 

@@ -22,8 +22,8 @@ public class GameOverUI : MonoBehaviour
 
         // sort players by score (highest first)
         var sortedPlayers = players
-    .OrderByDescending(p => p.Score)         
-    .ThenBy(p => p.LastBookTurn)              
+    .OrderByDescending(p => p.Score)
+    .ThenBy(p => p.LastBookTurn)
     .Take(activePlayers)
     .ToArray();
 
@@ -66,24 +66,9 @@ public class GameOverUI : MonoBehaviour
     }
 
     // [System.Obsolete]
-    public void PlayAgain()
+    public void HidePanel()
     {
-        Debug.Log("PLAY AGAIN BUTTON PRESSED");
-
-        // 🔥 Hide GameOver panel
         gameOverPanel.SetActive(false);
-
-        // 🔥 Find GameManager and restart game
-        GameManager gm = FindAnyObjectByType<GameManager>();
-
-        if (gm != null)
-        {
-            gm.RestartGame();
-        }
-        else
-        {
-            Debug.LogError("GameManager not found!");
-        }
     }
     public void QuitGame()
     {

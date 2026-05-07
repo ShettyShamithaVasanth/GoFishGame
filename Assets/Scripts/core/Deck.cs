@@ -4,10 +4,10 @@ using UnityEngine;
 public class Deck
 {
     private List<Card> cards = new List<Card>();
-    private GameManager gameManager;
-    public Deck(GameManager gameManager)
+    // private GameManager gameManager;
+    public Deck()
     {
-        this.gameManager = gameManager;
+        // this.gameManager = gameManager;
         CreateDeck();
         //Shuffle();
     }
