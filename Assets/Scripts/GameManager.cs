@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using System.Collections;
 using Unity.Netcode;
+using JetBrains.Annotations;
 
 public struct AIProfile
 {
@@ -361,6 +362,28 @@ public class GameManager : MonoBehaviour, ICardOwner
             {
                 col.enabled = false; // 🔥 disable ALL deck card colliders
             }
+            deckVisualCards.Add(cardObj);
+        }
+    }
+
+    public void UpdateDeckVisualCount(int remainingCards)
+    {
+        // Clear existing and recreate with count
+        foreach (GameObject card in deckVisualCards)
+            Destroy(card);
+        deckVisualCards.Clear();
+
+        int visualCount = Mathf.Min(remainingCards, maxVisibleDeckCards);
+        for (int i = 0; i < visualCount; i++)
+        {
+            GameObject cardObj = Instantiate(cardBackPrefab, deckPosition);
+            cardObj.transform.localPosition = new Vector3(0, i * 0.08f, 0);
+            UICard uiCard = cardObj.GetComponent<UICard>();
+            uiCard.cardData = cardData;
+            uiCard.SetCard(1, cardData.GetSuitSprite(CardSuit.Spade), cardData.SuitColors[0], this, i);
+            uiCard.ShowFront(false);
+            Collider2D col = cardObj.GetComponent<Collider2D>();
+            if (col != null) col.enabled = false;
             deckVisualCards.Add(cardObj);
         }
     }
@@ -1506,6 +1529,8 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public void ApplyPublicState(ulong[] ids, int[] scores, int[] cardCounts)
     {
+        if (players == null || activePlayers == null)
+            return;
         Debug.Log("Applying PUBLIC state");
         for (int i = 0; i < ids.Length; i++)
         {
@@ -1528,6 +1553,8 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public void ApplyPrivateHand(int[] hand)
     {
+        if (players == null || playerIdToClientId.Count == 0)
+            return;
         Debug.Log("Applying PRIVATE hand");
         // STEP 1: find MY player id
         int myId = GetLocalPlayerId(NetworkManager.Singleton.LocalClientId);
@@ -1584,6 +1611,22 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
     }
 
+    public void OnNetworkBookCreated(ulong playerId, int rank, int score)
+    {
+        int localId = GetLocalPlayerId(playerId);
+        if (localId == -1) return;
+        players[localId].SetScore(score);
+        int uiIndex = GetUIIndex(localId);
+        uiPlayers[uiIndex].UpdateScore(score);
+        if (toastUI != null)
+        {
+            if (players[localId].IsHuman)
+                toastUI.ShowToastWithAutoHide("You completed a book!", 3f);
+            else
+                toastUI.ShowToastWithAutoHide(players[localId].PlayerName + " completed a book!", 3f);
+        }
+    }
+
     public void InitializeMultiplayer()
     {
         Debug.Log("Initializing Multiplayer Game Setup...");
@@ -1599,6 +1642,14 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
 
         var netPlayers = NetworkPlayerManager.Instance.players;
+        int playerCount = NetworkPlayerManager.Instance.players.Count;
+
+        if (playerCount <= 2)
+            uiPlayers = mode2Players;
+        else if (playerCount == 3)
+            uiPlayers = mode3Players;
+        else
+            uiPlayers = mode4Players;
 
         if (netPlayers == null || netPlayers.Count == 0)
         {
@@ -1630,6 +1681,14 @@ public class GameManager : MonoBehaviour, ICardOwner
             uiPlayers[i].RefreshHand(p.IsHuman);
         }
 
+        for (int i = 0; i < uiPlayers.Length; i++)
+        {
+            if (uiPlayers[i] != null)
+            {
+                uiPlayers[i].gameObject.SetActive(i < netPlayers.Count);
+            }
+        }
+
         activePlayers = new int[NetworkPlayerManager.Instance.players.Count];
 
         for (int i = 0; i < activePlayers.Length; i++)
@@ -1652,7 +1711,14 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
         else
         {
-            CreateDeckVisual();
+            if (NetworkGameManager.Instance != null)
+            {
+                UpdateDeckVisualCount(NetworkGameManager.Instance.deckRemainingCards);
+            }
+            else
+            {
+                CreateDeckVisual();
+            }
         }
         currentPlayer = 0;
         // StartCurrentTurn();

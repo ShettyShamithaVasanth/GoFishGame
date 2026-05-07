@@ -239,6 +239,19 @@ public class LobbyManager : MonoBehaviour
         creatingRoomPanel.SetActive(false);
         lobbyPanel.SetActive(true);
 
+        if (playerSlots != null && playerSlots.Length > 0)
+        {
+            Sprite hostAvatar = null;
+            if (avatarDatabase != null && avatarDatabase.avatarSprites != null &&
+                ProfileData.PlayerAvatarIndex >= 0 &&
+                ProfileData.PlayerAvatarIndex < avatarDatabase.avatarSprites.Length)
+            {
+                hostAvatar = avatarDatabase.avatarSprites[ProfileData.PlayerAvatarIndex];
+            }
+            string hostName = string.IsNullOrEmpty(ProfileData.PlayerName) ? "Player" : ProfileData.PlayerName;
+            playerSlots[0].SetProfile(hostName, hostAvatar);
+        }
+
         //Set YOUR PLAYER UI
         // SetMyPlayerUI();
         //Show room code
@@ -462,39 +475,28 @@ public class LobbyManager : MonoBehaviour
     {
         if (!NetworkManager.Singleton.IsHost)
         {
-            Debug.Log("Only host can start the game.");
+            Debug.Log("Only host can start");
             return;
         }
-        // Minimum 2 players to start
         if (currentLobby == null || currentLobby.Players.Count < 2)
         {
-            Debug.Log("Not enough players to start the game.");
             ShowToast("At least 2 players required");
             return;
         }
 
-        // Debug.Log("Starting Game...");
-        Debug.Log("starting game,loadidng scene...");
-        // hide lobby UI
-        if (lobbyPanel != null)
-            lobbyPanel.SetActive(false);
-        // disable menu background
-        if (menuBackground != null)
-            menuBackground.SetActive(false);
+        // Hide lobby UI
+        if (lobbyPanel != null) lobbyPanel.SetActive(false);
+        if (menuBackground != null) menuBackground.SetActive(false);
+        if (friendsPanel != null) friendsPanel.SetActive(false);
+        if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
+        if (modeSelectionPanel != null) modeSelectionPanel.SetActive(false);
+        if (enteringGamePanel != null) enteringGamePanel.SetActive(true);
 
-        // hide all menu panels
-        if (friendsPanel != null)
-            friendsPanel.SetActive(false);
-        if (matchmakingPanel != null)
-            matchmakingPanel.SetActive(false);
-        if (modeSelectionPanel != null)
-            modeSelectionPanel.SetActive(false);
-
-        //show loading panel (for clients)
-        if (enteringGamePanel != null)
-            enteringGamePanel.SetActive(true);
-        // load game scene using Netcode SceneManager
-//        NetworkManager.Singleton.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
+        // TRIGGER game start on NetworkGameManager
+        if (NetworkGameManager.Instance != null)
+        {
+            NetworkGameManager.Instance.InitializeAndDeal();
+        }
     }
 
     // [Unity.Netcode.ClientRpc]
@@ -544,11 +546,10 @@ public class LobbyManager : MonoBehaviour
         //Safety check (important)
         if (playerSlots == null) return;
         //STEP A — Clear all slots except Player_0
-        for (int i = 0; i < playerSlots.Length; i++)
+        for (int i = currentLobby.Players.Count; i < playerSlots.Length; i++)
         {
             playerSlots[i].SetProfile("Waiting...", null);
         }
-
         //STEP B — Fill slots with real players
         for (int i = 0; i < currentLobby.Players.Count; i++)
         {
