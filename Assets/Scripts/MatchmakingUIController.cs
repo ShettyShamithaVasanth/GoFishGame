@@ -17,7 +17,7 @@ public class MatchmakingUIController : MonoBehaviour
         Instance = this;
     }
 
-    [System.Obsolete]
+    // [System.Obsolete]
     public void StartSearching()
     {
         panel.SetActive(true);
@@ -26,7 +26,7 @@ public class MatchmakingUIController : MonoBehaviour
         StartCoroutine(SearchTimer());
     }
 
-    [System.Obsolete]
+    // [System.Obsolete]
     IEnumerator SearchTimer()
     {
         while (timer > 0 && searching)
@@ -43,7 +43,7 @@ public class MatchmakingUIController : MonoBehaviour
         }
     }
 
-    [System.Obsolete]
+    // [System.Obsolete]
     IEnumerator HandleNoPlayersFound()
     {
         searching = false;
@@ -74,7 +74,7 @@ public class MatchmakingUIController : MonoBehaviour
         panel.SetActive(false);
     }
 
-    [System.Obsolete]
+    // [System.Obsolete]
     public void OnCancelClicked()
     {
         Debug.Log("Matchmaking cancelled by user");

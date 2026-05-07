@@ -65,7 +65,7 @@ public class GameOverUI : MonoBehaviour
         }
     }
 
-    [System.Obsolete]
+    // [System.Obsolete]
     public void PlayAgain()
     {
         Debug.Log("PLAY AGAIN BUTTON PRESSED");

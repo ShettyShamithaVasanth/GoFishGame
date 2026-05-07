@@ -97,7 +97,7 @@ public class EditProfileController : MonoBehaviour
         CloseEditProfile(); // go back to stats panel
     }
 
-    [System.Obsolete]
+    // [System.Obsolete]
     public void ConfirmFinalSave()
     {
         Debug.Log("Final Save Confirmed");

@@ -18,7 +18,6 @@ public class NetworkGameManager : NetworkBehaviour
         Instance = this;
     }
 
-    [System.Obsolete]
     public override void OnNetworkSpawn()
     {
         isGameStarted.OnValueChanged += OnGameStartedChanged;
@@ -31,7 +30,6 @@ public class NetworkGameManager : NetworkBehaviour
         }
     }
 
-    [System.Obsolete]
     System.Collections.IEnumerator StartGameWithEnoughPlayers()
     {
         Debug.Log("Waiting for enough players to start game...");
@@ -71,14 +69,12 @@ public class NetworkGameManager : NetworkBehaviour
         }
     }
 
-    [System.Obsolete]
     public override void OnNetworkDespawn()
     {
         isGameStarted.OnValueChanged -= OnGameStartedChanged;
         currentTurnPlayerId.OnValueChanged -= OnTurnchanged;
     }
 
-    [System.Obsolete]
     void OnGameStartedChanged(bool oldValue, bool newValue)
     {
         Debug.Log("StartGameClient CALLED");
@@ -131,14 +127,13 @@ public class NetworkGameManager : NetworkBehaviour
     //     isGameStarted.Value = true;
     // }
 
-    [System.Obsolete]
     void StartGameClient()
     {
         Debug.Log("StartGameClient CALLED");
         StartCoroutine(WaitForPlayersThenInit());
         Debug.Log("Client initializing game...");
         // STEP 1 — Find GameManager in scene
-        GameManager gm = FindFirstObjectByType<GameManager>();
+        GameManager gm = FindAnyObjectByType<GameManager>();
         // Safety check
         if (gm == null)
         {
@@ -159,7 +154,6 @@ public class NetworkGameManager : NetworkBehaviour
         // }
     }
 
-    [System.Obsolete]
     System.Collections.IEnumerator WaitForPlayersThenInit()
     {
         Debug.Log("Waiting for players to be ready...");
@@ -175,7 +169,7 @@ public class NetworkGameManager : NetworkBehaviour
         }
 
         Debug.Log("Players ready. Initializing game");
-        GameManager gm = FindFirstObjectByType<GameManager>();
+        GameManager gm = FindAnyObjectByType<GameManager>();
         if (gm == null)
         {
             Debug.LogError("GameManager NOT FOUND ❌");
@@ -185,7 +179,6 @@ public class NetworkGameManager : NetworkBehaviour
         gm.InitializeMultiplayer();
     }
 
-    [System.Obsolete]
     void DealCardsToPlayers()
     {
         if (!IsServer) return;
@@ -217,12 +210,11 @@ public class NetworkGameManager : NetworkBehaviour
         Debug.Log("First Turn Set to Player: " + currentTurnPlayerId.Value);
     }
 
-    [System.Obsolete]
     void OnTurnchanged(ulong oldPlayer, ulong newPlayer)
     {
         Debug.Log("Turn Changed:" + newPlayer);
         CheckIfMyTurn(newPlayer);
-        GameManager gm=FindFirstObjectByType<GameManager>();
+        GameManager gm=FindAnyObjectByType<GameManager>();
         if(gm!=null)
         {
             gm.ApplyNetworkTurn(newPlayer);
@@ -274,7 +266,6 @@ public class NetworkGameManager : NetworkBehaviour
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    [System.Obsolete]
     public void RequestCardRpc(int rank, ulong targetId, RpcParams rpcParams = default)
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
@@ -373,11 +364,10 @@ public class NetworkGameManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    [System.Obsolete]
     void SyncPublicStateClientRpc(ulong[] ids, int[] scores, int[] cardCounts)
     {
         Debug.Log("SyncPublicStateClientRpc RECEIVED");
-        GameManager gm = FindFirstObjectByType<GameManager>();
+        GameManager gm = FindAnyObjectByType<GameManager>();
 
         if (gm == null)
         {
@@ -387,7 +377,6 @@ public class NetworkGameManager : NetworkBehaviour
         gm.ApplyPublicState(ids, scores, cardCounts);
     }
 
-    [System.Obsolete]
     void SendStateToClients()
     {
         var players = NetworkPlayerManager.Instance.players;
@@ -421,17 +410,14 @@ public class NetworkGameManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    [System.Obsolete]
     void SyncPrivateHandClientRpc(int[] hand, ClientRpcParams rpcParams = default)
     {
-        GameManager gm = FindFirstObjectByType<GameManager>();
+        GameManager gm = FindAnyObjectByType<GameManager>();
         if (gm == null)
         {
-            Debug.LogError("GameManager not found");
+            Debug.LogError("GameManager not found ❌");
             return;
         }
         gm.ApplyPrivateHand(hand);
     }
-        
-    }
-
+}

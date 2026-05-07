@@ -36,7 +36,7 @@ public class PlayFabProfileManager : MonoBehaviour
     }
 
     //LOAD PROFILE FROM CLOUD
-    [System.Obsolete]
+    // [System.Obsolete]
     public void LoadProfile()
     {
         if (!PlayFabClientAPI.IsClientLoggedIn())

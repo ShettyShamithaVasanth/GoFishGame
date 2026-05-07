@@ -4,7 +4,7 @@ public class MatchmakingStarter : MonoBehaviour
 {
     public PlayerProfileUI myProfileUI;
 
-    [System.Obsolete]
+    // [System.Obsolete]
     void Start()
     {
         // if not online mode, do nothing
@@ -26,7 +26,7 @@ public class MatchmakingStarter : MonoBehaviour
         Sprite avatar = null;
 
         // get AvatarDatabase from LobbyManager
-        var db = FindFirstObjectByType<LobbyManager>()?.avatarDatabase;
+        var db = FindAnyObjectByType<LobbyManager>()?.avatarDatabase;
 
         if (db != null &&
             db.avatarSprites != null &&

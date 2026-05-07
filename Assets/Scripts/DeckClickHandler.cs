@@ -2,19 +2,19 @@ using UnityEngine;
 
 public class DeckClickHandler : MonoBehaviour
 {
-    [System.Obsolete]
+    // [System.Obsolete]
     private void OnEnable()
     {
         InputHandler.OnClick += HandleClick;
     }
 
-    [System.Obsolete]
+    // [System.Obsolete]
     private void OnDisable()
     {
         InputHandler.OnClick -= HandleClick;
     }
 
-    [System.Obsolete]
+    // [System.Obsolete]
     void HandleClick(Vector2 screenPos)
     {
         if (Camera.main == null)
