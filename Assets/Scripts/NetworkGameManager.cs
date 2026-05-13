@@ -2,6 +2,45 @@ using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System.Collections;
+
+public struct TurnResultData : INetworkSerializable
+{
+    public ulong askerClientId;
+    public ulong targetClientId;
+    public int rank;
+    public bool success;
+    public int transferCount;
+    public bool goFish;
+    public int drawnCardValue;
+    public bool isLucky;
+    public bool bookFormed;
+    public int bookRank;
+    public ulong bookPlayerClientId;
+    public int bookPlayerScore;
+    public bool continueTurn;
+    public ulong nextTurnClientId;
+    public int deckRemaining;
+
+    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+    {
+        serializer.SerializeValue(ref askerClientId);
+        serializer.SerializeValue(ref targetClientId);
+        serializer.SerializeValue(ref rank);
+        serializer.SerializeValue(ref success);
+        serializer.SerializeValue(ref transferCount);
+        serializer.SerializeValue(ref goFish);
+        serializer.SerializeValue(ref drawnCardValue);
+        serializer.SerializeValue(ref isLucky);
+        serializer.SerializeValue(ref bookFormed);
+        serializer.SerializeValue(ref bookRank);
+        serializer.SerializeValue(ref bookPlayerClientId);
+        serializer.SerializeValue(ref bookPlayerScore);
+        serializer.SerializeValue(ref continueTurn);
+        serializer.SerializeValue(ref nextTurnClientId);
+        serializer.SerializeValue(ref deckRemaining);
+    }
+}
 
 public class NetworkGameManager : NetworkBehaviour
 {
@@ -11,7 +50,7 @@ public class NetworkGameManager : NetworkBehaviour
     public NetworkVariable<int> requestedRank = new NetworkVariable<int>(-1);
     public NetworkVariable<ulong> targetPlayerId = new NetworkVariable<ulong>();
     public Button askButton;
-    public int deckRemainingCards = 0;
+    public NetworkVariable<int> deckRemainingCards = new NetworkVariable<int>(0);
 
     private void Awake()
     {
@@ -73,7 +112,7 @@ public class NetworkGameManager : NetworkBehaviour
         }
 
         // Additional safety: wait for player names to sync
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(1f);
 
         GameManager gm = FindAnyObjectByType<GameManager>();
         if (gm == null)
@@ -89,6 +128,7 @@ public class NetworkGameManager : NetworkBehaviour
         if (!IsServer)
         {
             RequestFullStateServerRpc();
+            yield return new WaitForSeconds(1f);
         }
         else
         {
@@ -187,7 +227,7 @@ public class NetworkGameManager : NetworkBehaviour
             }
         }
 
-        deckRemainingCards = NetworkDeckManager.Instance.deck.Count;
+        deckRemainingCards.Value = NetworkDeckManager.Instance.deck.Count;
         Debug.Log("Cards Dealt. Deck remaining: " + deckRemainingCards);
     }
 
@@ -202,9 +242,9 @@ public class NetworkGameManager : NetworkBehaviour
     void OnTurnchanged(ulong oldPlayer, ulong newPlayer)
     {
         CheckIfMyTurn(newPlayer);
-        GameManager gm = FindAnyObjectByType<GameManager>();
-        if (gm != null)
-            gm.ApplyNetworkTurn(newPlayer);
+        // GameManager gm = FindAnyObjectByType<GameManager>();
+        // if (gm != null)
+        //     gm.ApplyNetworkTurn(newPlayer);
     }
 
     void CheckIfMyTurn(ulong turnPlayerId)
@@ -231,45 +271,130 @@ public class NetworkGameManager : NetworkBehaviour
     public void RequestCardRpc(int rank, ulong targetId, RpcParams rpcParams = default)
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
-        if (senderId != currentTurnPlayerId.Value) return;
+
+        if (senderId != currentTurnPlayerId.Value)
+            return;
 
         var players = NetworkPlayerManager.Instance.players;
+
         NetworkPlayer sender = players.Find(p => p.OwnerClientId == senderId);
         NetworkPlayer target = players.Find(p => p.OwnerClientId == targetId);
 
-        if (sender == null || target == null) return;
+        if (sender == null || target == null)
+            return;
+
+        TurnResultData result = new TurnResultData
+        {
+            askerClientId = senderId,
+            targetClientId = targetId,
+            rank = rank
+        };
 
         if (target.HasRank(rank))
         {
             var cards = target.RemoveCardsByRank(rank);
+
             foreach (var card in cards)
+            {
                 sender.AddCard(card);
-            CheckForBook(sender);
+            }
+
+            result.success = true;
+            result.transferCount = cards.Count;
+            result.goFish = false;
+            result.drawnCardValue = -1;
+            result.isLucky = false;
+
+            int bookedRank = CheckForBook(sender);
+            result.bookFormed = bookedRank != -1;
+            if (result.bookFormed)
+            {
+                result.bookRank = bookedRank;
+                result.bookPlayerClientId = sender.OwnerClientId;
+                result.bookPlayerScore = sender.score.Value;
+            }
+
+            result.continueTurn = true;
+
+            result.deckRemaining = NetworkDeckManager.Instance.deck.Count;
         }
         else
         {
+            result.success = false;
+            result.transferCount = 0;
+            result.goFish = true;
+
             int drawnCard = NetworkDeckManager.Instance.DrawCard();
-            deckRemainingCards = NetworkDeckManager.Instance.deck.Count;
+
+            deckRemainingCards.Value = NetworkDeckManager.Instance.deck.Count;
+
             if (drawnCard != -1)
             {
                 sender.AddCard(drawnCard);
-                CheckForBook(sender);
-                if (drawnCard == rank)
+
+                result.drawnCardValue = drawnCard;
+
+                int drawnRank = drawnCard / 10;
+
+                result.isLucky = (drawnRank == rank);
+
+                int bookedRank = CheckForBook(sender);
+                result.bookFormed = bookedRank != -1;
+                if (result.bookFormed)
                 {
-                    Debug.Log("Drawn same rank → continue turn");
+                    result.bookRank = bookedRank;
+                    result.bookPlayerClientId = sender.OwnerClientId;
+                    result.bookPlayerScore = sender.score.Value;
+                }
+
+                if (result.isLucky)
+                {
+                    result.continueTurn = true;
                 }
                 else
                 {
+                    result.continueTurn = false;
+
                     NextTurn();
+
+                    result.nextTurnClientId = currentTurnPlayerId.Value;
                 }
             }
             else
             {
+                result.drawnCardValue = -1;
+                result.isLucky = false;
+                result.continueTurn = false;
+
                 NextTurn();
+
+                result.nextTurnClientId = currentTurnPlayerId.Value;
             }
+
+            result.deckRemaining = NetworkDeckManager.Instance.deck.Count;
         }
+
+        TurnResultClientRpc(result);
+
+        StartCoroutine(DelayedStateSync(7f));
+    }
+
+    [ClientRpc]
+    void TurnResultClientRpc(TurnResultData data, ClientRpcParams rpcParams = default)
+    {
+        GameManager gm = FindAnyObjectByType<GameManager>();
+        if (gm != null)
+        {
+            gm.PlayTurnResult(data);
+        }
+    }
+    IEnumerator DelayedStateSync(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
         BroadcastStateToAll();
     }
+
 
     void BroadcastStateToAll()
     {
@@ -302,14 +427,19 @@ public class NetworkGameManager : NetworkBehaviour
         }
     }
 
-    void CheckForBook(NetworkPlayer player)
+    int CheckForBook(NetworkPlayer player)
     {
+        int bookedRank = -1;
+
         Dictionary<int, int> count = new Dictionary<int, int>();
+
         foreach (var card in player.hand)
         {
             int rank = card / 10;
+
             if (!count.ContainsKey(rank))
                 count[rank] = 0;
+
             count[rank]++;
         }
 
@@ -317,13 +447,23 @@ public class NetworkGameManager : NetworkBehaviour
         {
             if (kvp.Value == 4)
             {
-                int rank = kvp.Key;
-                player.hand.RemoveAll(c => (c / 10) == rank);
-                player.completedBooks.Add(rank);
+                bookedRank = kvp.Key;
+
+                player.hand.RemoveAll(c => (c / 10) == bookedRank);
+
+                player.completedBooks.Add(bookedRank);
+
                 player.score.Value++;
-                BookCreatedClientRpc(player.OwnerClientId, rank, player.score.Value);
+
+                BookCreatedClientRpc(
+                    player.OwnerClientId,
+                    bookedRank,
+                    player.score.Value
+                );
             }
         }
+
+        return bookedRank;
     }
 
     [ClientRpc]

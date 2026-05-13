@@ -29,7 +29,8 @@ public class NetworkPlayer : NetworkBehaviour
         }
         if (IsOwner)
         {
-            SetPlayerNameServerRpc("Player_" + OwnerClientId);
+            string myName = string.IsNullOrEmpty(ProfileData.PlayerName) ? "Player" : ProfileData.PlayerName;
+            SetPlayerNameServerRpc(myName);
             SetAvatarIndexServerRpc(ProfileData.PlayerAvatarIndex);
         }
         gameObject.name = $"Player_{OwnerClientId}";

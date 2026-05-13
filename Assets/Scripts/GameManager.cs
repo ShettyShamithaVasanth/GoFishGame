@@ -756,25 +756,40 @@ public class GameManager : MonoBehaviour, ICardOwner
     ? ProfileData.PlayerName
     : players[targetID].PlayerName;
 
-        uiPlayers[currentUIIndex].ShowAskPopup(displayName, selectedRank);
-        currentTargetUI.ShowTargetPopup();
-        turnActionRunning = true;
-        Debug.Log("Human asking for rank: " + selectedRank);
-
         if (GameModeManager.isOnlineMode)
         {
+            turnActionRunning = true;
             if (!playerIdToClientId.ContainsKey(targetID))
             {
                 Debug.LogError("Target ClientID not found");
                 return;
             }
-
             ulong targetClientId = playerIdToClientId[targetID];
-            Debug.Log("Sending RPC → Rank: " + selectedRank + " TargetClientId: " + targetClientId);
             NetworkGameManager.Instance.RequestCardRpc(selectedRank, targetClientId);
-            //STOP LOCAL LOGIC
+            waitingForTarget = false;
+            lockTargetSelection = false;
             return;
         }
+
+        uiPlayers[currentUIIndex].ShowAskPopup(displayName, selectedRank);
+        currentTargetUI.ShowTargetPopup();
+        turnActionRunning = true;
+        Debug.Log("Human asking for rank: " + selectedRank);
+
+        // if (GameModeManager.isOnlineMode)
+        // {
+        //     if (!playerIdToClientId.ContainsKey(targetID))
+        //     {
+        //         Debug.LogError("Target ClientID not found");
+        //         return;
+        //     }
+
+        //     ulong targetClientId = playerIdToClientId[targetID];
+        //     Debug.Log("Sending RPC → Rank: " + selectedRank + " TargetClientId: " + targetClientId);
+        //     NetworkGameManager.Instance.RequestCardRpc(selectedRank, targetClientId);
+        //     //STOP LOCAL LOGIC
+        //     return;
+        // }
 
 
         // CASE 1 — SUCCESS
@@ -940,32 +955,47 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     void RemoveTopDeckVisual()
     {
-        int actualDeckCount = deck.CardCount(); // remaining real cards
+        int actualDeckCount;
+
+        if (GameModeManager.isOnlineMode)
+        {
+            actualDeckCount = Mathf.Max(deckVisualCards.Count - 1, 0);
+        }
+        else
+        {
+            if (deck == null)
+                return;
+
+            actualDeckCount = deck.CardCount();
+        }
+
         int currentVisualCount = deckVisualCards.Count;
 
-        // 🔥 calculate how many SHOULD be visible
-        int expectedVisualCount = Mathf.Min(actualDeckCount, maxVisibleDeckCards);
+        int expectedVisualCount =
+            Mathf.Min(actualDeckCount, maxVisibleDeckCards);
 
-        // 🔥 remove ONLY if visuals exceed expected
         if (currentVisualCount > expectedVisualCount)
         {
-            GameObject topCard = deckVisualCards[deckVisualCards.Count - 1];
+            GameObject topCard =
+                deckVisualCards[deckVisualCards.Count - 1];
 
             deckVisualCards.RemoveAt(deckVisualCards.Count - 1);
 
             Destroy(topCard);
         }
 
-        // 👇 enable new top card collider
         if (deckVisualCards.Count > 0)
         {
-            GameObject newTop = deckVisualCards[deckVisualCards.Count - 1];
+            GameObject newTop =
+                deckVisualCards[deckVisualCards.Count - 1];
 
             Collider2D col = newTop.GetComponent<Collider2D>();
+
             if (col != null)
                 col.enabled = true;
         }
     }
+
     IEnumerator AnimateCardMove(Transform from, Transform to, Card card, int targetPlayerID)
     {
         int uiIndex = GetUIIndex(currentPlayer);
@@ -1531,23 +1561,35 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         if (players == null || activePlayers == null)
             return;
-        Debug.Log("Applying PUBLIC state");
+
+        int myId = GetLocalPlayerId(NetworkManager.Singleton.LocalClientId);
+
         for (int i = 0; i < ids.Length; i++)
         {
-            // STEP 1: convert clientId → local playerId
             int localId = GetLocalPlayerId(ids[i]);
-            // STEP 2: safety check
+
             if (localId == -1)
-            {
-                Debug.LogWarning("Player mapping not found for clientId: " + ids[i]);
                 continue;
-            }
-            // STEP 3: update score
+
             players[localId].SetScore(scores[i]);
-            // STEP 4 (optional future)
-            // players[localId].SetCardCount(cardCounts[i]);
+
+            if (localId != myId)
+            {
+                int currentCount = players[localId].PlayerHand.Cards.Count;
+                int targetCount = cardCounts[i];
+
+                if (currentCount != targetCount)
+                {
+                    players[localId].PlayerHand.Clear();
+
+                    for (int j = 0; j < targetCount; j++)
+                    {
+                        players[localId].AddCard(new Card(0, CardSuit.Spade));
+                    }
+                }
+            }
         }
-        // STEP 5: refresh UI
+
         RefreshAllHands();
     }
 
@@ -1705,22 +1747,16 @@ public class GameManager : MonoBehaviour, ICardOwner
         //Refresh all hands visually
         RefreshAllHands();
 
-        if (cardBackPrefab == null || deckPosition == null)
+        if (cardBackPrefab != null && deckPosition != null)
         {
-            Debug.LogError("Deck Visual references missing");
-        }
-        else
-        {
-            if (NetworkGameManager.Instance != null)
-            {
-                UpdateDeckVisualCount(NetworkGameManager.Instance.deckRemainingCards);
-            }
-            else
-            {
-                CreateDeckVisual();
-            }
+            StartCoroutine(WaitForDeckThenCreate());
         }
         currentPlayer = 0;
+        players[0].StartTurn();
+        if (players[0].IsHuman)
+        {
+            toastUI.ShowToast("Your turn! Select a rank card");
+        }
         // StartCurrentTurn();
 
         // STEP 3 — Enable interaction
@@ -1731,6 +1767,32 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         Debug.Log("Multiplayer Setup Complete ✔");
     }
+
+    IEnumerator WaitForDeckThenCreate()
+    {
+        if (NetworkGameManager.Instance != null)
+        {
+            float timeout = 5f;
+            while (NetworkGameManager.Instance.deckRemainingCards.Value == 0 && timeout > 0)
+            {
+                yield return null;
+                timeout -= Time.deltaTime;
+            }
+
+            int deckCount = NetworkGameManager.Instance.deckRemainingCards.Value;
+            if (deckCount > 0)
+            {
+                UpdateDeckVisualCount(deckCount);
+                Debug.Log("Deck visual created: " + deckCount + " cards");
+            }
+            else
+            {
+                UpdateDeckVisualCount(44);
+                Debug.LogWarning("Deck count 0 after timeout, fallback 44");
+            }
+        }
+    }
+
 
     // System.Collections.IEnumerator SyncHands(List<NetworkPlayer> netPlayers)
     // {
@@ -1836,12 +1898,161 @@ public class GameManager : MonoBehaviour, ICardOwner
     //     return sortedRanks;
     // }
 
+    public void PlayTurnResult(TurnResultData data)
+    {
+        if (!GameModeManager.isOnlineMode)
+            return;
+
+        StartCoroutine(PlayTurnResultCoroutine(data));
+    }
+
+    IEnumerator PlayTurnResultCoroutine(TurnResultData data)
+    {
+        int askerId = GetLocalPlayerId(data.askerClientId);
+        int targetId = GetLocalPlayerId(data.targetClientId);
+
+        if (askerId == -1 || targetId == -1)
+            yield break;
+
+        int askerUI = GetUIIndex(askerId);
+        int targetUI = GetUIIndex(targetId);
+
+        turnActionRunning = true;
+
+        string targetName = players[targetId].PlayerName;
+
+        uiPlayers[askerUI].ShowAskPopup(targetName, data.rank);
+
+        yield return new WaitForSeconds(2f);
+
+        if (data.success)
+        {
+            uiPlayers[targetUI].ShowReplyPopup(true, data.transferCount, data.rank);
+
+            yield return new WaitForSeconds(1.5f);
+
+            yield return StartCoroutine(
+                AnimateCardMove(
+                    uiPlayers[targetUI].transform,
+                    uiPlayers[askerUI].transform,
+                    ConvertToCard(data.rank * 10),
+                    askerId
+                )
+            );
+
+            if (data.bookFormed)
+            {
+                int bookLocalId = GetLocalPlayerId(data.bookPlayerClientId);
+
+                int bookUI = GetUIIndex(bookLocalId);
+
+                players[bookLocalId].SetScore(data.bookPlayerScore);
+
+                uiPlayers[bookUI].UpdateScore(data.bookPlayerScore);
+
+                if (toastUI != null)
+                {
+                    if (players[bookLocalId].IsHuman)
+                        toastUI.ShowToastWithAutoHide("You completed a book!", 3f);
+                    else
+                        toastUI.ShowToastWithAutoHide(players[bookLocalId].PlayerName + " completed a book!", 3f);
+                }
+
+                yield return new WaitForSeconds(2f);
+            }
+        }
+        else
+        {
+            uiPlayers[targetUI].ShowReplyPopup(false, 0, data.rank);
+
+            yield return new WaitForSeconds(1.5f);
+
+            if (data.drawnCardValue != -1)
+            {
+                RemoveTopDeckVisual();
+
+                Card drawn = ConvertToCard(data.drawnCardValue);
+
+                yield return StartCoroutine(
+                    AnimateCardMove(
+                        deckPosition,
+                        uiPlayers[askerUI].transform,
+                        drawn,
+                        askerId
+                    )
+                );
+
+                if (data.isLucky)
+                {
+                    uiPlayers[askerUI].ShowLuckyDrawPopup(drawn.Rank);
+
+                    yield return new WaitForSeconds(2f);
+                }
+
+                if (data.bookFormed)
+                {
+                    int bookLocalId = GetLocalPlayerId(data.bookPlayerClientId);
+
+                    int bookUI = GetUIIndex(bookLocalId);
+
+                    players[bookLocalId].SetScore(data.bookPlayerScore);
+
+                    uiPlayers[bookUI].UpdateScore(data.bookPlayerScore);
+
+                    if (toastUI != null)
+                    {
+                        if (players[bookLocalId].IsHuman)
+                            toastUI.ShowToastWithAutoHide("You completed a book!", 3f);
+                        else
+                            toastUI.ShowToastWithAutoHide(players[bookLocalId].PlayerName + " completed a book!", 3f);
+                    }
+
+                    yield return new WaitForSeconds(2f);
+                }
+            }
+        }
+
+        uiPlayers[targetUI].HideTargetPopup();
+
+        UpdateDeckVisualCount(data.deckRemaining);
+
+        if (data.continueTurn)
+        {
+            if (players[askerId].IsHuman)
+            {
+                toastUI.ShowToast("You got cards! Select a rank card");
+            }
+        }
+        else
+        {
+            int nextLocalId = GetLocalPlayerId(data.nextTurnClientId);
+
+            currentPlayer = nextLocalId;
+
+            players[nextLocalId].StartTurn();
+
+            if (players[nextLocalId].IsHuman)
+            {
+                toastUI.ShowToast("Your turn! Select a rank card");
+
+                selectedRank = -1;
+
+                waitingForTarget = false;
+            }
+        }
+
+        turnActionRunning = false;
+    }
+
     Card ConvertToCard(int value)
     {
         int rank = value / 10;
         int suit = value % 10;
         return new Card(rank, (CardSuit)suit);
     }
+
+
+
 
 
 }
