@@ -12,6 +12,8 @@ public struct TurnResultData : INetworkSerializable
     public bool success;
     public int transferCount;
     public bool goFish;
+    public bool waitingForDraw;
+    public int[] transferredCards;
     public int drawnCardValue;
     public bool isLucky;
     public bool bookFormed;
@@ -30,6 +32,8 @@ public struct TurnResultData : INetworkSerializable
         serializer.SerializeValue(ref success);
         serializer.SerializeValue(ref transferCount);
         serializer.SerializeValue(ref goFish);
+        serializer.SerializeValue(ref waitingForDraw);
+        serializer.SerializeValue(ref transferredCards);
         serializer.SerializeValue(ref drawnCardValue);
         serializer.SerializeValue(ref isLucky);
         serializer.SerializeValue(ref bookFormed);
@@ -50,6 +54,9 @@ public class NetworkGameManager : NetworkBehaviour
     public NetworkVariable<int> requestedRank = new NetworkVariable<int>(-1);
     public NetworkVariable<ulong> targetPlayerId = new NetworkVariable<ulong>();
     public Button askButton;
+    private ulong pendingDrawPlayerId = ulong.MaxValue;
+    private int pendingDrawAskedRank = -1;
+    private ulong pendingDrawTargetId = ulong.MaxValue;
     public NetworkVariable<int> deckRemainingCards = new NetworkVariable<int>(0);
 
     private void Awake()
@@ -293,7 +300,7 @@ public class NetworkGameManager : NetworkBehaviour
         if (target.HasRank(rank))
         {
             var cards = target.RemoveCardsByRank(rank);
-
+            result.transferredCards = cards.ToArray();
             foreach (var card in cards)
             {
                 sender.AddCard(card);
@@ -324,59 +331,114 @@ public class NetworkGameManager : NetworkBehaviour
             result.transferCount = 0;
             result.goFish = true;
 
-            int drawnCard = NetworkDeckManager.Instance.DrawCard();
+            result.waitingForDraw = true;
 
-            deckRemainingCards.Value = NetworkDeckManager.Instance.deck.Count;
+            result.drawnCardValue = -1;
 
-            if (drawnCard != -1)
+            result.transferredCards = new int[0];
+
+            pendingDrawPlayerId = senderId;
+            pendingDrawAskedRank = rank;
+            pendingDrawTargetId = targetId;
+
+            TurnResultClientRpc(result);
+            StartCoroutine(DelayedStateSync(5f));
+            return;
+        }
+
+        TurnResultClientRpc(result);
+        StartCoroutine(DelayedStateSync(5f));
+    }
+
+    [Rpc(SendTo.Server)]
+    public void RequestDrawFromDeckRpc(RpcParams rpcParams = default)
+    {
+        ulong senderId = rpcParams.Receive.SenderClientId;
+
+        if (senderId != pendingDrawPlayerId)
+            return;
+
+        var players = NetworkPlayerManager.Instance.players;
+
+        NetworkPlayer sender =
+            players.Find(p => p.OwnerClientId == senderId);
+
+        if (sender == null)
+            return;
+
+        TurnResultData result = new TurnResultData();
+
+        result.askerClientId = senderId;
+        result.targetClientId = pendingDrawTargetId;
+
+        result.goFish = true;
+        result.waitingForDraw = false;
+
+        int drawnCard = NetworkDeckManager.Instance.DrawCard();
+
+        deckRemainingCards.Value =
+            NetworkDeckManager.Instance.deck.Count;
+
+        if (drawnCard != -1)
+        {
+            sender.AddCard(drawnCard);
+
+            result.drawnCardValue = drawnCard;
+
+            int drawnRank = drawnCard / 10;
+
+            result.isLucky =
+                (drawnRank == pendingDrawAskedRank);
+
+            int bookedRank = CheckForBook(sender);
+
+            result.bookFormed = bookedRank != -1;
+
+            if (result.bookFormed)
             {
-                sender.AddCard(drawnCard);
+                result.bookRank = bookedRank;
+                result.bookPlayerClientId =
+                    sender.OwnerClientId;
 
-                result.drawnCardValue = drawnCard;
+                result.bookPlayerScore =
+                    sender.score.Value;
+            }
 
-                int drawnRank = drawnCard / 10;
-
-                result.isLucky = (drawnRank == rank);
-
-                int bookedRank = CheckForBook(sender);
-                result.bookFormed = bookedRank != -1;
-                if (result.bookFormed)
-                {
-                    result.bookRank = bookedRank;
-                    result.bookPlayerClientId = sender.OwnerClientId;
-                    result.bookPlayerScore = sender.score.Value;
-                }
-
-                if (result.isLucky)
-                {
-                    result.continueTurn = true;
-                }
-                else
-                {
-                    result.continueTurn = false;
-
-                    NextTurn();
-
-                    result.nextTurnClientId = currentTurnPlayerId.Value;
-                }
+            if (result.isLucky)
+            {
+                result.continueTurn = true;
             }
             else
             {
-                result.drawnCardValue = -1;
-                result.isLucky = false;
                 result.continueTurn = false;
 
                 NextTurn();
 
-                result.nextTurnClientId = currentTurnPlayerId.Value;
+                result.nextTurnClientId =
+                    currentTurnPlayerId.Value;
             }
+        }
+        else
+        {
+            result.drawnCardValue = -1;
 
-            result.deckRemaining = NetworkDeckManager.Instance.deck.Count;
+            result.continueTurn = false;
+
+            NextTurn();
+
+            result.nextTurnClientId =
+                currentTurnPlayerId.Value;
         }
 
-        TurnResultClientRpc(result);
+        result.deckRemaining =
+            NetworkDeckManager.Instance.deck.Count;
 
-        StartCoroutine(DelayedStateSync(7f));
+        pendingDrawPlayerId = ulong.MaxValue;
+        pendingDrawAskedRank = -1;
+        pendingDrawTargetId = ulong.MaxValue;
+
+        TurnResultClientRpc(result);
+        StartCoroutine(DelayedStateSync(5f));
     }
 
     [ClientRpc]
