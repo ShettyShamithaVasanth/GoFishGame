@@ -280,13 +280,24 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         if (players == null || activePlayers == null)
             return;
-
-        if (!players[currentPlayer].IsHuman)
-            return;
-
-        if (uiPlayer.GetPlayerID() != currentPlayer)
-            return;
-
+        if (GameModeManager.isOnlineMode)
+        {
+            ulong myClientId = NetworkManager.Singleton.LocalClientId;
+            if (NetworkGameManager.Instance == null) return;
+            if (NetworkGameManager.Instance.currentTurnPlayerId.Value != myClientId)
+                return;
+            int myLocalId = GetLocalPlayerId(myClientId);
+            if (myLocalId == -1) return;
+            if (uiPlayer.GetPlayerID() != myLocalId)
+                return;
+        }
+        else
+        {
+            if (!players[currentPlayer].IsHuman)
+                return;
+            if (uiPlayer.GetPlayerID() != currentPlayer)
+                return;
+        }
         SetSelectedRank(rank);
     }
 
@@ -402,7 +413,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     }
 
-   
+
 
     void StartCurrentTurn()
     {
@@ -1671,26 +1682,34 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public void ApplyNetworkTurn(ulong clientId)
     {
-        //convert clientId → local player index
         int localId = GetLocalPlayerId(clientId);
-        //safety check
-        if (localId == -1)
-        {
-            Debug.LogError("Turn player not found ❌");
-            return;
-        }
-        //update current player
+        if (localId == -1) return;
+
         currentPlayer = localId;
+        players[localId].StartTurn();
+
+        if (toastUI != null)
+            toastUI.HideToast();
 
         Debug.Log("Turn applied to: " + players[localId].PlayerName);
-        //OPTIONAL UI feedback
+
         if (players[localId].IsHuman)
         {
+            selectedRank = -1;
+            waitingForTarget = false;
+            waitingForDeckClick = false;
+            turnActionRunning = false;
+            lockTargetSelection = false;
+            askedRankTargetThisTurn.Clear();
+
             if (toastUI != null)
-            {
-                toastUI.ShowToast("Your turn!");
-            }
+                toastUI.ShowToast("Your turn! Select a rank card");
         }
+    }
+
+    public bool IsInitialized()
+    {
+        return players != null && playerIdToClientId != null && playerIdToClientId.Count > 0;
     }
 
     public void OnNetworkBookCreated(ulong playerId, int rank, int score)
@@ -1798,12 +1817,12 @@ public class GameManager : MonoBehaviour, ICardOwner
                 StartCoroutine(WaitForDeckThenCreate()); // client waits for sync
             }
         }
-        currentPlayer = 0;
-        players[0].StartTurn();
-        if (players[0].IsHuman)
-        {
-            toastUI.ShowToast("Your turn! Select a rank card");
-        }
+        // currentPlayer = 0;
+        // players[0].StartTurn();
+        // if (players[0].IsHuman)
+        // {
+        //     toastUI.ShowToast("Your turn! Select a rank card");
+        // }
         // StartCurrentTurn();
 
         // STEP 3 — Enable interaction
@@ -2222,4 +2241,9 @@ public class GameManager : MonoBehaviour, ICardOwner
         int suit = value % 10;
         return new Card(rank, (CardSuit)suit);
     }
+
+    // internal bool IsInitialized()
+    // {
+    //     throw new System.NotImplementedException();
+    // }
 }

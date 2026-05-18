@@ -9074,7 +9074,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &705330599
 Transform:
   m_ObjectHideFlags: 0
@@ -29007,6 +29007,11 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
   askButton: {fileID: 64076656}
+  deckRemainingCards:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
 --- !u!4 &2105003744
 Transform:
   m_ObjectHideFlags: 0

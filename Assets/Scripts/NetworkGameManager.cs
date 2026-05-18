@@ -3,6 +3,7 @@ using Unity.Netcode;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Collections;
+using Unity.VisualScripting;
 
 public struct TurnResultData : INetworkSerializable
 {
@@ -101,11 +102,79 @@ public class NetworkGameManager : NetworkBehaviour
         Debug.Log("GAME STARTED on this client");
 
         // Hide entering panel
-        if (LobbyManager.Instance != null && LobbyManager.Instance.enteringGamePanel != null)
-            LobbyManager.Instance.enteringGamePanel.SetActive(false);
+        HideAllLobbyPanels();
+        ActivateGameScene();
 
         // Initialize this client's GameManager (works for BOTH host and client)
         StartCoroutine(WaitForPlayersThenInit());
+    }
+    void HideAllLobbyPanels()
+    {
+        if (LobbyManager.Instance != null)
+        {
+            var lm = LobbyManager.Instance;
+            if (lm.enteringGamePanel != null)
+                lm.enteringGamePanel.SetActive(false);
+            if (lm.lobbyPanel != null)
+                lm.lobbyPanel.SetActive(false);
+            if (lm.friendsPanel != null)
+                lm.friendsPanel.SetActive(false);
+            if (lm.matchmakingPanel != null)
+                lm.matchmakingPanel.SetActive(false);
+            if (lm.modeSelectionPanel != null)
+                lm.modeSelectionPanel.SetActive(false);
+            if (lm.menuBackground != null)
+                lm.menuBackground.SetActive(false);
+            if (lm.creatingRoomPanel != null)
+                lm.creatingRoomPanel.SetActive(false);
+        }
+        MenuController menu = FindAnyObjectByType<MenuController>();
+        if (menu != null)
+        {
+            if (menu.MenuUI != null)
+                menu.MenuUI.SetActive(false);
+            if (menu.LoadingPanel != null)
+                menu.LoadingPanel.SetActive(false);
+            if (menu.ModeSelectionPanel != null)
+                menu.ModeSelectionPanel.SetActive(false);
+            if (menu.FriendsPanel != null)
+                menu.FriendsPanel.SetActive(false);
+        }
+    }
+
+    void ActivateGameScene()
+    {
+        GameSceneUI gameSceneUI = FindAnyObjectByType<GameSceneUI>();
+        gameSceneUI?.ShowPanel();
+    }
+
+    void ActivatePlayerPosition(int playerCount)
+    {
+        MenuController menu = FindAnyObjectByType<MenuController>();
+        if (menu == null)
+            return;
+        menu.TopPlayer?.SetActive(false);
+        menu.BottomPlayer?.SetActive(false);
+        menu.LeftPlayer?.SetActive(false);
+        menu.RightPlayer?.SetActive(false);
+        menu.DeckPosition?.SetActive(false);
+        menu.BottomPlayer?.SetActive(true);
+        if (playerCount == 2)
+        {
+            menu.TopPlayer?.SetActive(true);
+        }
+        else if (playerCount == 3)
+        {
+            menu.LeftPlayer?.SetActive(true);
+            menu.RightPlayer?.SetActive(true);
+        }
+        else
+        {
+            menu.TopPlayer?.SetActive(true);
+            menu.LeftPlayer?.SetActive(true);
+            menu.RightPlayer?.SetActive(true);
+        }
+        menu.DeckPosition?.SetActive(true);
     }
 
     System.Collections.IEnumerator WaitForPlayersThenInit()
@@ -120,6 +189,7 @@ public class NetworkGameManager : NetworkBehaviour
 
         // Additional safety: wait for player names to sync
         yield return new WaitForSeconds(1f);
+        ActivatePlayerPosition(NetworkPlayerManager.Instance.players.Count);
 
         GameManager gm = FindAnyObjectByType<GameManager>();
         if (gm == null)
@@ -142,8 +212,7 @@ public class NetworkGameManager : NetworkBehaviour
             // Host: apply state directly (it's already server-side)
             ApplyServerStateLocally();
         }
-
-        CheckIfMyTurn(currentTurnPlayerId.Value);
+        gm.ApplyNetworkTurn(currentTurnPlayerId.Value);
     }
 
     void ApplyServerStateLocally()
@@ -249,9 +318,9 @@ public class NetworkGameManager : NetworkBehaviour
     void OnTurnchanged(ulong oldPlayer, ulong newPlayer)
     {
         CheckIfMyTurn(newPlayer);
-        // GameManager gm = FindAnyObjectByType<GameManager>();
-        // if (gm != null)
-        //     gm.ApplyNetworkTurn(newPlayer);
+        GameManager gm = FindAnyObjectByType<GameManager>();
+        if (gm != null && gm.IsInitialized())
+            gm.ApplyNetworkTurn(newPlayer);
     }
 
     void CheckIfMyTurn(ulong turnPlayerId)
@@ -342,12 +411,12 @@ public class NetworkGameManager : NetworkBehaviour
             pendingDrawTargetId = targetId;
 
             TurnResultClientRpc(result);
-            StartCoroutine(DelayedStateSync(5f));
+            StartCoroutine(DelayedStateSync(2.5f));
             return;
         }
 
         TurnResultClientRpc(result);
-        StartCoroutine(DelayedStateSync(5f));
+        StartCoroutine(DelayedStateSync(2.5f));
     }
 
     [Rpc(SendTo.Server)]
@@ -367,7 +436,7 @@ public class NetworkGameManager : NetworkBehaviour
             return;
 
         TurnResultData result = new TurnResultData();
-
+        result.transferredCards = new int[0];
         result.askerClientId = senderId;
         result.targetClientId = pendingDrawTargetId;
 
@@ -438,7 +507,7 @@ public class NetworkGameManager : NetworkBehaviour
         pendingDrawTargetId = ulong.MaxValue;
 
         TurnResultClientRpc(result);
-        StartCoroutine(DelayedStateSync(5f));
+        StartCoroutine(DelayedStateSync(2.5f));
     }
 
     [ClientRpc]
