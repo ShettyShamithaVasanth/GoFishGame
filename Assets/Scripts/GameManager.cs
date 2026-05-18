@@ -301,6 +301,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     void CreateDeckVisual()
     {
+        Debug.Log("create Deck visual");
         deckVisualCards.Clear();
 
         int totalDeckCards = 0;
@@ -368,6 +369,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public void UpdateDeckVisualCount(int remainingCards)
     {
+        Debug.Log("Clearing the existing deck");
         // Clear existing and recreate with count
         foreach (GameObject card in deckVisualCards)
             Destroy(card);
@@ -386,8 +388,21 @@ public class GameManager : MonoBehaviour, ICardOwner
             Collider2D col = cardObj.GetComponent<Collider2D>();
             if (col != null) col.enabled = false;
             deckVisualCards.Add(cardObj);
+            cardObj.SetActive(true);
+
         }
+
+        // DOVirtual.DelayedCall(0.1f, () =>
+        // {
+        //     deckVisualCards.ForEach((card) =>
+        //     {
+        //         card.SetActive(true);
+        //     });
+        // });
+
     }
+
+   
 
     void StartCurrentTurn()
     {
@@ -918,12 +933,14 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         toastUI.HideToast();
         Debug.Log("Deck clicked.");
+        Debug.Log("checking if game is alreadcy over");
         if (gameOver)
         {
             Debug.Log("Game is already over. Deck click ignored.");
             return;
         }
-
+        Debug.Log("game is active continuie exectution");
+        Debug.Log("chceking waiting for deck flag");
         if (!waitingForDeckClick)
         {
             Debug.Log("not waiting for deck click. Ignoring.");
@@ -932,12 +949,14 @@ public class GameManager : MonoBehaviour, ICardOwner
 
 
         Card drawn = null;
+        Debug.Log("checking game mode");
         if (!GameModeManager.isOnlineMode)
         {
             drawn = deck.GetCard();
         }
         else
         {
+            Debug.Log("Online mode activated");
             NetworkGameManager.Instance.RequestDrawFromDeckRpc();
 
             waitingForDeckClick = false;
@@ -946,6 +965,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
             return;
         }
+        Debug.Log("Ending of the game");
         if (drawn == null)
         {
             Debug.Log("Deck is empty. Ending game.");
