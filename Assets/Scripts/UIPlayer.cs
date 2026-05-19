@@ -116,7 +116,7 @@ public class UIPlayer : MonoBehaviour, ICardOwner
         if (popup2 != null)
             popup2.SetActive(false);
     }
-    void HideTurnPopupOnly()
+    public void HideTurnPopupOnly()
     {
         if (popup1 != null)
             popup1.SetActive(false);
@@ -339,7 +339,4 @@ public class UIPlayer : MonoBehaviour, ICardOwner
     {
         gameObject.SetActive(show);
     }
-
-
-
 }

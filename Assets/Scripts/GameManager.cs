@@ -1704,6 +1704,11 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         if (toastUI != null)
             toastUI.HideToast();
+        foreach (UIPlayer ui in uiPlayers)
+        {
+            ui.HideTargetPopup();
+            ui.HideTurnPopupOnly();
+        }
 
         Debug.Log("Turn applied to: " + players[localId].PlayerName);
 
@@ -1756,9 +1761,9 @@ public class GameManager : MonoBehaviour, ICardOwner
             return;
         }
 
-        NetworkPlayer[] foundPlayers =FindObjectsByType<NetworkPlayer>();
-        List<NetworkPlayer> netPlayers =new List<NetworkPlayer>(foundPlayers);
-        netPlayers.Sort((a, b) =>a.OwnerClientId.CompareTo(b.OwnerClientId));
+        NetworkPlayer[] foundPlayers = FindObjectsByType<NetworkPlayer>();
+        List<NetworkPlayer> netPlayers = new List<NetworkPlayer>(foundPlayers);
+        netPlayers.Sort((a, b) => a.OwnerClientId.CompareTo(b.OwnerClientId));
         int playerCount = netPlayers.Count;
 
         if (playerCount <= 2)
@@ -2007,20 +2012,20 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         int askerId = GetLocalPlayerId(data.askerClientId);
         int targetId = GetLocalPlayerId(data.targetClientId);
-
         if (askerId == -1 || targetId == -1)
             yield break;
-
         int askerUI = GetUIIndex(askerId);
         int targetUI = GetUIIndex(targetId);
 
         turnActionRunning = true;
-
-        string targetName = players[targetId].PlayerName;
-
-        uiPlayers[askerUI].ShowAskPopup(targetName, data.rank);
-
-        yield return new WaitForSeconds(2f);
+        // Only show ASK popup for SUCCESS and GO FISH Phase 1
+        // Phase 2 already showed it earlier
+        if (data.success || (data.goFish && data.waitingForDraw))
+        {
+            string targetName = players[targetId].PlayerName;
+            uiPlayers[askerUI].ShowAskPopup(targetName, data.rank);
+            yield return new WaitForSeconds(2f);
+        }
 
         // CASE 1 — SUCCESS
         if (data.success)
@@ -2050,6 +2055,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
             // Refresh synced hands
             RefreshAllHands();
+            uiPlayers[targetUI].HideTargetPopup();
 
             // Book handling
             if (data.bookFormed)
@@ -2084,9 +2090,9 @@ public class GameManager : MonoBehaviour, ICardOwner
                         );
                     }
                 }
-
                 yield return new WaitForSeconds(2f);
             }
+            uiPlayers[askerUI].HideTurnPopupOnly();
 
             UpdateDeckVisualCount(data.deckRemaining);
 
@@ -2119,6 +2125,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             );
 
             yield return new WaitForSeconds(1.5f);
+            uiPlayers[askerUI].HideTurnPopupOnly();
 
             // Enable deck click
             waitingForDeckClick = true;
@@ -2164,9 +2171,9 @@ public class GameManager : MonoBehaviour, ICardOwner
             data.drawnCardValue != -1)
         {
             RemoveTopDeckVisual();
-
-            Card drawn =
-                ConvertToCard(data.drawnCardValue);
+            uiPlayers[askerUI].HideTurnPopupOnly();
+            uiPlayers[targetUI].HideTargetPopup();
+            Card drawn = ConvertToCard(data.drawnCardValue);
 
             yield return StartCoroutine(
                 AnimateCardMove(
@@ -2239,18 +2246,12 @@ public class GameManager : MonoBehaviour, ICardOwner
             }
             else
             {
-                int nextLocalId =
-                    GetLocalPlayerId(data.nextTurnClientId);
-
-                currentPlayer = nextLocalId;
-
-                players[nextLocalId].StartTurn();
-
-                if (players[nextLocalId].IsHuman)
+                // Turn already handled by ApplyNetworkTurn
+                // Just clean all popups
+                foreach (UIPlayer ui in uiPlayers)
                 {
-                    toastUI.ShowToast(
-                        "Your turn! Select a rank card"
-                    );
+                    ui.HideTargetPopup();
+                    ui.HideTurnPopupOnly();
                 }
             }
 
@@ -2259,9 +2260,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             waitingForTarget = false;
             waitingForDeckClick = false;
             lockTargetSelection = false;
-
             turnActionRunning = false;
-
             yield break;
         }
     }

@@ -250,8 +250,8 @@ public class LobbyManager : MonoBehaviour
             }
             string hostName = string.IsNullOrEmpty(ProfileData.PlayerName) ? "Player" : ProfileData.PlayerName;
             playerSlots[0].SetProfile(hostName, hostAvatar);
+            UpdatePlayerSlotsUI();
         }
-
         //Set YOUR PLAYER UI
         // SetMyPlayerUI();
         //Show room code
@@ -332,16 +332,13 @@ public class LobbyManager : MonoBehaviour
         });
 
         Debug.Log("Joined Lobby");
-        //SHOW "ENTERING GAME" PANEL
-        if (enteringGamePanel != null)
+        lobbyPanel?.SetActive(true);
+        menuBackground?.SetActive(false);
+        if (roomCodeText != null)
         {
-            enteringGamePanel.SetActive(true);
+            roomCodeText.text = "Room Code: " + currentLobby.LobbyCode;
         }
-
-        if (menuBackground != null)
-        {
-            menuBackground.SetActive(false);
-        }
+        UpdatePlayerSlotsUI();
         await JoinRelay();
     }
 
@@ -548,13 +545,13 @@ public class LobbyManager : MonoBehaviour
         //STEP A — Clear all slots except Player_0
         for (int i = currentLobby.Players.Count; i < playerSlots.Length; i++)
         {
-            playerSlots[i].SetProfile("Waiting...", null);
+            playerSlots[i]?.SetProfile("Waiting...", null);
         }
         //STEP B — Fill slots with real players
         for (int i = 0; i < currentLobby.Players.Count; i++)
         {
             if (i >= playerSlots.Length) break;
-
+            if (playerSlots[i] == null) continue;
             var player = currentLobby.Players[i];
 
             string name = "Player";
@@ -590,14 +587,9 @@ public class LobbyManager : MonoBehaviour
         // enable start button only if host band player>=2
         if (startButton != null)
         {
-            if (NetworkManager.Singleton.IsHost && currentLobby.Players.Count >= 2)
-            {
-                startButton.interactable = true;
-            }
-            else
-            {
-                startButton.interactable = false;
-            }
+            startButton.interactable =NetworkManager.Singleton.IsHost &&
+            currentLobby.Players.Count >= 2;
+            startButton.gameObject.SetActive(NetworkManager.Singleton.IsHost);
         }
     }
 }

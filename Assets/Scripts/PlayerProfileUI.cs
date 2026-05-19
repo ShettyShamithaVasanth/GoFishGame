@@ -9,9 +9,9 @@ public class PlayerProfileUI : MonoBehaviour
 
     public void SetProfile(string playerName, Sprite avatar)
     {
-        nameText.text = playerName;
-
-        if (avatar != null)
+        if (nameText != null)
+            nameText.text = playerName;
+        if (avatar != null && avatarImage != null)
             avatarImage.sprite = avatar;
     }
 }
