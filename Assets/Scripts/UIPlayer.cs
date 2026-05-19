@@ -288,7 +288,7 @@ public class UIPlayer : MonoBehaviour, ICardOwner
     }
 
     public void ShowAskPopup(string targetName, int rank)
-    { 
+    {
         if (popup1 != null)
             popup1.SetActive(true);
 
@@ -331,11 +331,15 @@ public class UIPlayer : MonoBehaviour, ICardOwner
     IEnumerator HideLuckyPopup()
     {
         yield return new WaitForSeconds(2f);
-
         if (popup1 != null)
             popup1.SetActive(false);
-
         luckyRoutine = null;
     }
+    public void ShowSeat(bool show)
+    {
+        gameObject.SetActive(show);
+    }
+
+
 
 }

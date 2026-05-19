@@ -106,7 +106,7 @@ public class NetworkGameManager : NetworkBehaviour
         ActivateGameScene();
 
         // Initialize this client's GameManager (works for BOTH host and client)
-        StartCoroutine(WaitForPlayersThenInit());
+        // StartCoroutine(WaitForPlayersThenInit());
     }
     void HideAllLobbyPanels()
     {
@@ -146,7 +146,61 @@ public class NetworkGameManager : NetworkBehaviour
     {
         GameSceneUI gameSceneUI = FindAnyObjectByType<GameSceneUI>();
         gameSceneUI?.ShowPanel();
+        StartCoroutine(DelayedMultiplayerInitialization());
     }
+    IEnumerator DelayedMultiplayerInitialization()
+    {
+        Debug.Log("WAITING FOR FULL CLIENT INITIALIZATION");
+
+        // WAIT FOR SCENE OBJECTS
+        GameManager gm = null;
+
+        while (gm == null)
+        {
+            gm = FindAnyObjectByType<GameManager>();
+
+            yield return null;
+        }
+
+        Debug.Log("GameManager FOUND");
+
+        // WAIT FOR NETWORK PLAYERS
+        NetworkPlayer[] netPlayers = null;
+
+        while (netPlayers == null || netPlayers.Length < 2)
+        {
+            netPlayers = FindObjectsByType<NetworkPlayer>();
+
+            yield return null;
+        }
+        Debug.Log("Network Players READY"+ netPlayers.Length);
+
+        // EXTRA SAFETY WAIT
+        yield return new WaitForSeconds(2f);
+
+        ActivatePlayerPosition(netPlayers.Length);
+        GameModeManager.isOnlineMode = true;
+
+        Debug.Log("CLIENT READY - Initializing Multiplayer");
+
+        gm.InitializeMultiplayer();
+
+        yield return new WaitForSeconds(1f);
+
+        if (!IsServer)
+        {
+            RequestFullStateServerRpc();
+        }
+        else
+        {
+            ApplyServerStateLocally();
+        }
+
+        gm.ApplyNetworkTurn(currentTurnPlayerId.Value);
+
+        Debug.Log("MULTIPLAYER INIT COMPLETE");
+    }
+
 
     void ActivatePlayerPosition(int playerCount)
     {
@@ -186,9 +240,10 @@ public class NetworkGameManager : NetworkBehaviour
         {
             yield return null;
         }
+        yield return new WaitUntil(() => NetworkPlayerManager.Instance.players.Count >= 2);
 
         // Additional safety: wait for player names to sync
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(2f);
         ActivatePlayerPosition(NetworkPlayerManager.Instance.players.Count);
 
         GameManager gm = FindAnyObjectByType<GameManager>();
@@ -197,7 +252,7 @@ public class NetworkGameManager : NetworkBehaviour
             Debug.LogError("GameManager NOT FOUND");
             yield break;
         }
-
+        Debug.Log("CLIENT READY - Initializing Multiplayer");
         GameModeManager.isOnlineMode = true;
         gm.InitializeMultiplayer();
 
@@ -411,12 +466,12 @@ public class NetworkGameManager : NetworkBehaviour
             pendingDrawTargetId = targetId;
 
             TurnResultClientRpc(result);
-            StartCoroutine(DelayedStateSync(2.5f));
+            StartCoroutine(DelayedStateSync(5f));
             return;
         }
 
         TurnResultClientRpc(result);
-        StartCoroutine(DelayedStateSync(2.5f));
+        StartCoroutine(DelayedStateSync(5f));
     }
 
     [Rpc(SendTo.Server)]

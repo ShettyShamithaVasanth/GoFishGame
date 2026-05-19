@@ -380,6 +380,16 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public void UpdateDeckVisualCount(int remainingCards)
     {
+        if (deckPosition == null)
+        {
+            Debug.LogError("DeckPosition missing");
+            return;
+        }
+        if (cardBackPrefab == null)
+        {
+            Debug.LogError("CardBackPrefab missing");
+            return;
+        }
         Debug.Log("Clearing the existing deck");
         // Clear existing and recreate with count
         foreach (GameObject card in deckVisualCards)
@@ -1640,8 +1650,8 @@ public class GameManager : MonoBehaviour, ICardOwner
                 }
             }
         }
-
-        RefreshAllHands();
+        if (!turnActionRunning)
+            RefreshAllHands();
     }
 
     public void ApplyPrivateHand(int[] hand)
@@ -1665,7 +1675,8 @@ public class GameManager : MonoBehaviour, ICardOwner
             players[myId].AddCard(ConvertToCard(value));
         }
         // STEP 4: refresh UI
-        RefreshAllHands();
+        if (!turnActionRunning)
+            RefreshAllHands();
         // STEP 5: VERY IMPORTANT (fix stuck turn)
         // turnActionRunning = false;
     }
@@ -1684,7 +1695,10 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         int localId = GetLocalPlayerId(clientId);
         if (localId == -1) return;
-
+        foreach (int id in activePlayers)
+        {
+            players[id]?.EndTurn();
+        }
         currentPlayer = localId;
         players[localId].StartTurn();
 
@@ -1738,12 +1752,14 @@ public class GameManager : MonoBehaviour, ICardOwner
         // Safety
         if (NetworkPlayerManager.Instance == null)
         {
-            Debug.LogError("NetworkPlayerManager missing ❌");
+            Debug.LogError("NetworkPlayerManager missing ");
             return;
         }
 
-        var netPlayers = NetworkPlayerManager.Instance.players;
-        int playerCount = NetworkPlayerManager.Instance.players.Count;
+        NetworkPlayer[] foundPlayers =FindObjectsByType<NetworkPlayer>();
+        List<NetworkPlayer> netPlayers =new List<NetworkPlayer>(foundPlayers);
+        netPlayers.Sort((a, b) =>a.OwnerClientId.CompareTo(b.OwnerClientId));
+        int playerCount = netPlayers.Count;
 
         if (playerCount <= 2)
             uiPlayers = mode2Players;
@@ -1754,48 +1770,63 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         if (netPlayers == null || netPlayers.Count == 0)
         {
-            Debug.LogError("No network players found ❌");
+            Debug.LogError("No network players found");
             return;
         }
 
         // STEP 1 — Assign UI players based on network players
+        PlayerSeatMapper.Instance.BuildSeatMap(netPlayers);
         for (int i = 0; i < netPlayers.Count; i++)
         {
-            if (i >= uiPlayers.Length) break;
-
+            if (i >= uiPlayers.Length)
+                break;
             NetworkPlayer netPlayer = netPlayers[i];
+            // GET PROFESSIONAL LOCAL SEAT
+            int seatIndex = PlayerSeatMapper.Instance.GetSeatIndex(netPlayer.OwnerClientId);
+            Debug.Log("Client " + netPlayer.OwnerClientId + " mapped to seat " + seatIndex);
 
-            // Create local Player object using network data
+            // CREATE LOCAL PLAYER
             Player p = new Player(
-                i,
+                seatIndex,
                 netPlayer.playerName.Value.ToString(),
-                netPlayer.OwnerClientId == NetworkManager.Singleton.LocalClientId,
+                netPlayer.OwnerClientId ==
+                NetworkManager.Singleton.LocalClientId,
                 netPlayer.avatarIndex.Value
             );
+            // STORE PLAYER USING SEAT INDEX
+            players[seatIndex] = p;
+            // MAP SEAT -> REAL CLIENT ID
+            playerIdToClientId[seatIndex] = netPlayer.OwnerClientId;
 
-            players[i] = p;
-            playerIdToClientId[i] = netPlayer.OwnerClientId;
-
-            // Initialize UI
-            uiPlayers[i].Initialize(p);
-            BindUIPlayer(uiPlayers[i]);
-            uiPlayers[i].RefreshHand(p.IsHuman);
+            // INITIALIZE CORRECT UI POSITION
+            if (seatIndex >= 0 && seatIndex < uiPlayers.Length)
+            {
+                uiPlayers[seatIndex].Initialize(p);
+                BindUIPlayer(uiPlayers[seatIndex]);
+                uiPlayers[seatIndex].RefreshHand(p.IsHuman);
+            }
+            // BIND EVENTS
+            // BindUIPlayer(uiPlayers[seatIndex]);
+            // // REFRESH HAND
+            // uiPlayers[seatIndex].RefreshHand(p.IsHuman);
+            Debug.Log("Initialized UI seat " + seatIndex);
         }
 
         for (int i = 0; i < uiPlayers.Length; i++)
         {
             if (uiPlayers[i] != null)
             {
-                uiPlayers[i].gameObject.SetActive(i < netPlayers.Count);
+                bool shouldShow = i < netPlayers.Count;
+                uiPlayers[i].ShowSeat(shouldShow);
             }
         }
 
-        activePlayers = new int[NetworkPlayerManager.Instance.players.Count];
-
-        for (int i = 0; i < activePlayers.Length; i++)
+        List<int> activeList = new List<int>();
+        foreach (var kvp in playerIdToClientId)
         {
-            activePlayers[i] = i;
+            activeList.Add(kvp.Key);
         }
+        activePlayers = activeList.ToArray();
         // deck = new Deck(this);
 
         // for (int i = 0; i < netPlayers.Count; i++)

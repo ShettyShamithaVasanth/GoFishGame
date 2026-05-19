@@ -14,7 +14,7 @@ public class NetworkPlayerManager : NetworkBehaviour
             return;
         }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+        // DontDestroyOnLoad(gameObject);
         Debug.Log("NetworkPlayerManager Initialized");
     }
 
