@@ -7,6 +7,7 @@ using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Unity.Services.Authentication;
 
 public class LobbyManager : MonoBehaviour
 {
@@ -32,7 +33,7 @@ public class LobbyManager : MonoBehaviour
 
     Lobby currentLobby;
     float polltimer = 0f;
-    float pollInterval = 2f;
+    float pollInterval = 5f;
 
     enum ErrorAction
     {
@@ -107,12 +108,20 @@ public class LobbyManager : MonoBehaviour
         {
             NetworkManager.Singleton.SceneManager.OnLoadComplete += OnSceneLoaded;
         }
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnectedRefresh;
+        }
     }
     void OnDisable()
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
         {
             NetworkManager.Singleton.SceneManager.OnLoadComplete -= OnSceneLoaded;
+        }
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnectedRefresh;
         }
     }
 
@@ -129,6 +138,13 @@ public class LobbyManager : MonoBehaviour
                 enteringGamePanel.SetActive(false);
             }
         }
+    }
+
+    async void OnClientConnectedRefresh(ulong clientId)
+    {
+        if (currentLobby == null) return;
+        Debug.Log("[LobbyRefresh] Client connected: " + clientId + " — refreshing lobby");
+        await RefreshLobby();
     }
 
     async Task RefreshLobby()
@@ -216,6 +232,8 @@ public class LobbyManager : MonoBehaviour
         });
         Debug.Log("Lobby Created: " + currentLobby.Id);
 
+        //Refresh local lobby to get our own updated data
+        currentLobby = await LobbyService.Instance.GetLobbyAsync(currentLobby.Id);
         //Create Relay
         string joinCode = await CreateRelay();
         //Store relay code inside lobby
@@ -239,21 +257,22 @@ public class LobbyManager : MonoBehaviour
         creatingRoomPanel.SetActive(false);
         lobbyPanel.SetActive(true);
 
-        if (playerSlots != null && playerSlots.Length > 0)
-        {
-            Sprite hostAvatar = null;
-            if (avatarDatabase != null && avatarDatabase.avatarSprites != null &&
-                ProfileData.PlayerAvatarIndex >= 0 &&
-                ProfileData.PlayerAvatarIndex < avatarDatabase.avatarSprites.Length)
-            {
-                hostAvatar = avatarDatabase.avatarSprites[ProfileData.PlayerAvatarIndex];
-            }
-            string hostName = string.IsNullOrEmpty(ProfileData.PlayerName) ? "Player" : ProfileData.PlayerName;
-            playerSlots[0].SetProfile(hostName, hostAvatar);
-            UpdatePlayerSlotsUI();
-        }
+        // if (playerSlots != null && playerSlots.Length > 0)
+        // {
+        //     Sprite hostAvatar = null;
+        //     if (avatarDatabase != null && avatarDatabase.avatarSprites != null &&
+        //         ProfileData.PlayerAvatarIndex >= 0 &&
+        //         ProfileData.PlayerAvatarIndex < avatarDatabase.avatarSprites.Length)
+        //     {
+        //         hostAvatar = avatarDatabase.avatarSprites[ProfileData.PlayerAvatarIndex];
+        //     }
+        //     string hostName = string.IsNullOrEmpty(ProfileData.PlayerName) ? "Player" : ProfileData.PlayerName;
+        //     playerSlots[0].SetProfile(hostName, hostAvatar);
+        //     UpdatePlayerSlotsUI();
+        // }
         //Set YOUR PLAYER UI
         // SetMyPlayerUI();
+        UpdatePlayerSlotsUI();
         //Show room code
         roomCodeText.text = "Room Code: " + currentLobby.LobbyCode;
         //Start Host
@@ -331,6 +350,8 @@ public class LobbyManager : MonoBehaviour
             }
         });
 
+        //Refresh local lobby to get our own updated data
+        currentLobby = await LobbyService.Instance.GetLobbyAsync(currentLobby.Id);
         Debug.Log("Joined Lobby");
         lobbyPanel?.SetActive(true);
         menuBackground?.SetActive(false);
@@ -538,57 +559,79 @@ public class LobbyManager : MonoBehaviour
 
     void UpdatePlayerSlotsUI()
     {
-        if (currentLobby == null)
-            return;
-        //Safety check (important)
+        if (currentLobby == null) return;
         if (playerSlots == null) return;
-        //STEP A — Clear all slots except Player_0
+        string localPlayerId = AuthenticationService.Instance.PlayerId;
+        Debug.Log($"[LobbySlots] Players in lobby: {currentLobby.Players.Count}, LocalPlayerId: {localPlayerId}");
+
+        foreach (var p in currentLobby.Players)
+        {
+            string dataInfo = p.Data != null
+                ? $"name={(p.Data.ContainsKey("name") ? p.Data["name"].Value : "MISSING")}, avatar={(p.Data.ContainsKey("avatar") ? p.Data["avatar"].Value : "MISSING")}"
+                : "Data=NULL";
+            Debug.Log($"[LobbySlots] Player {p.Id}: {dataInfo}");
+        }
+        // Clear empty slots
         for (int i = currentLobby.Players.Count; i < playerSlots.Length; i++)
         {
             playerSlots[i]?.SetProfile("Waiting...", null);
         }
-        //STEP B — Fill slots with real players
+
+        // Fill player slots
         for (int i = 0; i < currentLobby.Players.Count; i++)
         {
             if (i >= playerSlots.Length) break;
             if (playerSlots[i] == null) continue;
             var player = currentLobby.Players[i];
-
-            string name = "Player";
-            int avatarIndex = 0;
+            string name;
+            int avatarIndex;
             Sprite avatarSprite = null;
-
-            //GET NAME
-            if (player.Data != null && player.Data.ContainsKey("name"))
+            // LOCAL PLAYER
+            if (player.Id == localPlayerId)
             {
-                name = player.Data["name"].Value;
+                name = string.IsNullOrEmpty(ProfileData.PlayerName)
+                    ? "Player" : ProfileData.PlayerName;
+                avatarIndex = ProfileData.PlayerAvatarIndex;
+            }
+            else
+            {
+                // OTHER PLAYERS
+                name = "Player";
+                avatarIndex = 0;
+                if (player.Data != null &&
+                    player.Data.ContainsKey("name"))
+                {
+                    name = player.Data["name"].Value;
+                }
+                if (player.Data != null &&
+                    player.Data.ContainsKey("avatar"))
+                {
+                    int.TryParse(
+                        player.Data["avatar"].Value,
+                        out avatarIndex
+                    );
+                }
             }
 
-            //GET AVATAR INDEX
-            if (player.Data != null && player.Data.ContainsKey("avatar"))
-            {
-                int.TryParse(player.Data["avatar"].Value, out avatarIndex);
-            }
-
-            // GET SPRITE FROM DATABASE
+            // GET AVATAR SPRITE
             if (avatarDatabase != null &&
                 avatarDatabase.avatarSprites != null &&
+                avatarIndex >= 0 &&
                 avatarIndex < avatarDatabase.avatarSprites.Length)
             {
-                avatarSprite = avatarDatabase.avatarSprites[avatarIndex];
+                avatarSprite =
+                    avatarDatabase.avatarSprites[avatarIndex];
             }
-
-            // GET SPRITE FROM DATABASE
+            // APPLY UI
             playerSlots[i].SetProfile(name, avatarSprite);
-
-            Debug.Log($"Slot{i} → {name}, AvatarIndex: {avatarIndex}");
+            Debug.Log($"Slot{i} → {name}, AvatarIndex: {avatarIndex},IsLocal: {player.Id == localPlayerId}"
+            );
         }
-
-        // enable start button only if host band player>=2
+        // START BUTTON
         if (startButton != null)
         {
-            startButton.interactable =NetworkManager.Singleton.IsHost &&
-            currentLobby.Players.Count >= 2;
+            startButton.interactable = NetworkManager.Singleton.IsHost &&
+                currentLobby.Players.Count >= 2;
             startButton.gameObject.SetActive(NetworkManager.Singleton.IsHost);
         }
     }
