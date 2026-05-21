@@ -2010,6 +2010,13 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     IEnumerator PlayTurnResultCoroutine(TurnResultData data)
     {
+        Debug.Log("=== PLAY TURN RESULT RECEIVED ===");
+        Debug.Log("ASKER CLIENT: " + data.askerClientId);
+        Debug.Log("TARGET CLIENT: " + data.targetClientId);
+        Debug.Log("RANK: " + data.rank);
+        Debug.Log("SUCCESS: " + data.success);
+        Debug.Log("GO FISH: " + data.goFish);
+
         int askerId = GetLocalPlayerId(data.askerClientId);
         int targetId = GetLocalPlayerId(data.targetClientId);
         if (askerId == -1 || targetId == -1)
@@ -2022,6 +2029,8 @@ public class GameManager : MonoBehaviour, ICardOwner
         // Phase 2 already showed it earlier
         if (data.success || (data.goFish && data.waitingForDraw))
         {
+            Debug.Log(players[askerId].PlayerName +" asked " + 
+            players[targetId].PlayerName +" for rank " +data.rank);
             string targetName = players[targetId].PlayerName;
             uiPlayers[askerUI].ShowAskPopup(targetName, data.rank);
             yield return new WaitForSeconds(2f);
