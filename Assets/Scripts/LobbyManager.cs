@@ -154,7 +154,7 @@ public class LobbyManager : MonoBehaviour
             //Ask server for latest lobby data
             currentLobby = await LobbyService.Instance.GetLobbyAsync(currentLobby.Id);
             //Print how many players are inside
-            Debug.Log("Players in lobby: " + currentLobby.Players.Count);
+            // Debug.Log("Players in lobby: " + currentLobby.Players.Count);
             //Update UI (we will build this next step)
             UpdatePlayerSlotsUI();
         }
@@ -562,14 +562,14 @@ public class LobbyManager : MonoBehaviour
         if (currentLobby == null) return;
         if (playerSlots == null) return;
         string localPlayerId = AuthenticationService.Instance.PlayerId;
-        Debug.Log($"[LobbySlots] Players in lobby: {currentLobby.Players.Count}, LocalPlayerId: {localPlayerId}");
+        // Debug.Log($"[LobbySlots] Players in lobby: {currentLobby.Players.Count}, LocalPlayerId: {localPlayerId}");
 
         foreach (var p in currentLobby.Players)
         {
             string dataInfo = p.Data != null
                 ? $"name={(p.Data.ContainsKey("name") ? p.Data["name"].Value : "MISSING")}, avatar={(p.Data.ContainsKey("avatar") ? p.Data["avatar"].Value : "MISSING")}"
                 : "Data=NULL";
-            Debug.Log($"[LobbySlots] Player {p.Id}: {dataInfo}");
+            // Debug.Log($"[LobbySlots] Player {p.Id}: {dataInfo}");
         }
         // Clear empty slots
         for (int i = currentLobby.Players.Count; i < playerSlots.Length; i++)
@@ -623,10 +623,17 @@ public class LobbyManager : MonoBehaviour
                     avatarDatabase.avatarSprites[avatarIndex];
             }
             // APPLY UI
-            string debugName =$"{name} [seat:{i} net:{player.Id}]";
+            string shortId =
+    player.Id.Substring(
+        0,
+        System.Math.Min(player.Id.Length, 8)
+    );
+
+            string debugName =
+                $"{name} [seat:{i} net:{shortId}]";
             playerSlots[i].SetProfile(debugName, avatarSprite);
-            Debug.Log($"Slot{i} → {name}, AvatarIndex: {avatarIndex},IsLocal: {player.Id == localPlayerId}"
-            );
+            // Debug.Log($"Slot{i} → {name}, AvatarIndex: {avatarIndex},IsLocal: {player.Id == localPlayerId}"
+            // );
         }
         // START BUTTON
         if (startButton != null)

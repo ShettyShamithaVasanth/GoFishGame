@@ -49,7 +49,7 @@ public class NetworkPlayer : NetworkBehaviour
     public void AddCard(int card)
     {
         hand.Add(card);
-        Debug.Log($"Player {OwnerClientId} received card: {card}");
+        // Debug.Log($"Player {OwnerClientId} received card: {card}");
     }
 
     public List<int> RemoveCardsByRank(int rank)

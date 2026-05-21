@@ -11,6 +11,7 @@ public class Player
     public int Score { get; private set; } = 0;
     public int? SeatId;
     public string NetworkId;
+    public ulong NetworkClientId { get; set; } = ulong.MaxValue;
     public int LastBookTurn = int.MaxValue;
     // private int publicCardCount = 0;
 

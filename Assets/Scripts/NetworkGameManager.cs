@@ -395,6 +395,10 @@ public class NetworkGameManager : NetworkBehaviour
         if (currentIndex == -1) return;
 
         int nextIndex = (currentIndex + 1) % players.Count;
+        Debug.Log(
+    $"[SERVER-NEXT-TURN] FROM Client:{currentTurnPlayerId.Value} " +
+    $"TO Client:{players[nextIndex].OwnerClientId}"
+);
         currentTurnPlayerId.Value = players[nextIndex].OwnerClientId;
     }
 
@@ -402,6 +406,10 @@ public class NetworkGameManager : NetworkBehaviour
     public void RequestCardRpc(int rank, ulong targetId, RpcParams rpcParams = default)
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
+        Debug.Log(
+    $"[SERVER-ASK] FROM Client:{senderId} " +
+    $"TO Client:{targetId} rank:{rank}"
+);
 
         if (senderId != currentTurnPlayerId.Value)
             return;
@@ -432,6 +440,11 @@ public class NetworkGameManager : NetworkBehaviour
 
             result.success = true;
             result.transferCount = cards.Count;
+            Debug.Log(
+    $"[SERVER-SUCCESS] {cards.Count} cards " +
+    $"FROM Client:{targetId} " +
+    $"TO Client:{senderId}"
+);
             result.goFish = false;
             result.drawnCardValue = -1;
             result.isLucky = false;
@@ -465,6 +478,10 @@ public class NetworkGameManager : NetworkBehaviour
             pendingDrawAskedRank = rank;
             pendingDrawTargetId = targetId;
 
+            Debug.Log(
+    $"[SERVER-GOFISH] FROM Client:{senderId} " +
+    $"TO DECK | pendingDraw:{senderId}"
+);
             TurnResultClientRpc(result);
             StartCoroutine(DelayedStateSync(5f));
             return;
@@ -478,7 +495,10 @@ public class NetworkGameManager : NetworkBehaviour
     public void RequestDrawFromDeckRpc(RpcParams rpcParams = default)
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
-
+        Debug.Log(
+    $"[SERVER-DRAW] FROM DECK " +
+    $"TO Client:{senderId}"
+);
         if (senderId != pendingDrawPlayerId)
             return;
 
@@ -558,6 +578,13 @@ public class NetworkGameManager : NetworkBehaviour
             NetworkDeckManager.Instance.deck.Count;
 
         pendingDrawPlayerId = ulong.MaxValue;
+        Debug.Log(
+    $"[SERVER-DRAW-RESULT] FROM DECK " +
+    $"TO Client:{senderId} " +
+    $"drew:{drawnCard} " +
+    $"Lucky:{result.isLucky} " +
+    $"DeckRemaining:{NetworkDeckManager.Instance.deck.Count}"
+);
         pendingDrawAskedRank = -1;
         pendingDrawTargetId = ulong.MaxValue;
 
@@ -640,6 +667,11 @@ public class NetworkGameManager : NetworkBehaviour
                 player.completedBooks.Add(bookedRank);
 
                 player.score.Value++;
+                Debug.Log(
+    $"[SERVER-BOOK] Player Client:{player.OwnerClientId} " +
+    $"completed book rank:{bookedRank} " +
+    $"score:{player.score.Value}"
+);
 
                 BookCreatedClientRpc(
                     player.OwnerClientId,

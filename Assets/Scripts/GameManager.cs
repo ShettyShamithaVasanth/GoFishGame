@@ -63,6 +63,18 @@ public class GameManager : MonoBehaviour, ICardOwner
     private bool gameOver = false;
     private bool lockTargetSelection = false;
     public ToastUI toastUI;
+
+    string Dbg(Player p)
+    {
+        if (p == null) return "[null]";
+
+        string seat = p.SeatId.HasValue
+                ? p.SeatId.Value.ToString() : "-";
+        string net = string.IsNullOrEmpty(p.NetworkId)
+                ? "-" : p.NetworkId;
+        return $"{p.PlayerName}[seat:{seat} net:{net}]";
+    }
+
     // 🔥 Player names pool (10 names)
     [SerializeField]
     private AIProfile[] aiProfiles = new AIProfile[]
@@ -798,13 +810,15 @@ public class GameManager : MonoBehaviour, ICardOwner
             turnActionRunning = true;
             // SHOW ASK POPUP IMMEDIATELY
             uiPlayers[currentUIIndex].ShowAskPopup(displayName, selectedRank);
+            ulong targetClientId = playerIdToClientId[targetID];
+            Debug.Log($"[NET-ASK] {Dbg(askingPlayer)} → {Dbg(targetPlayer)} " +
+            $"rank:{selectedRank} targetClientId:{targetClientId}");
             currentTargetUI.ShowTargetPopup();
             if (!playerIdToClientId.ContainsKey(targetID))
             {
                 Debug.LogError("Target ClientID not found");
                 return;
             }
-            ulong targetClientId = playerIdToClientId[targetID];
             NetworkGameManager.Instance.RequestCardRpc(selectedRank, targetClientId);
             waitingForTarget = false;
             lockTargetSelection = false;
@@ -875,8 +889,8 @@ public class GameManager : MonoBehaviour, ICardOwner
         toastUI.HideToast();
         toastUI.ShowToast("Now select a player");
 
-        Debug.Log("Selected Rank: " + rank);
-        Debug.Log("Now select a target player");
+        // Debug.Log("Selected Rank: " + rank);
+        // Debug.Log("Now select a target player");
 
     }
 
@@ -953,15 +967,15 @@ public class GameManager : MonoBehaviour, ICardOwner
     public void OnDeckClicked()
     {
         toastUI.HideToast();
-        Debug.Log("Deck clicked.");
-        Debug.Log("checking if game is alreadcy over");
+        // Debug.Log("Deck clicked.");
+        // Debug.Log("checking if game is alreadcy over");
         if (gameOver)
         {
             Debug.Log("Game is already over. Deck click ignored.");
             return;
         }
-        Debug.Log("game is active continuie exectution");
-        Debug.Log("chceking waiting for deck flag");
+        // Debug.Log("game is active continuie exectution");
+        // Debug.Log("chceking waiting for deck flag");
         if (!waitingForDeckClick)
         {
             Debug.Log("not waiting for deck click. Ignoring.");
@@ -970,14 +984,17 @@ public class GameManager : MonoBehaviour, ICardOwner
 
 
         Card drawn = null;
-        Debug.Log("checking game mode");
+        // Debug.Log("checking game mode");
         if (!GameModeManager.isOnlineMode)
         {
             drawn = deck.GetCard();
         }
         else
         {
-            Debug.Log("Online mode activated");
+            // Debug.Log("Online mode activated");
+            int myId = GetLocalPlayerId(NetworkManager.Singleton.LocalClientId);
+            Player myPlayer = players[myId];
+            Debug.Log($"[NET-DECK] {Dbg(myPlayer)} clicked deck | requesting draw");
             NetworkGameManager.Instance.RequestDrawFromDeckRpc();
 
             waitingForDeckClick = false;
@@ -986,7 +1003,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
             return;
         }
-        Debug.Log("Ending of the game");
+        // Debug.Log("Ending of the game");
         if (drawn == null)
         {
             Debug.Log("Deck is empty. Ending game.");
@@ -997,7 +1014,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         waitingForDeckClick = false;
         lockTargetSelection = false; // 🔥 UNLOCK after draw
 
-        Debug.Log("removed top deck visual");
+        // Debug.Log("removed top deck visual");
         RemoveTopDeckVisual();
         toastUI.ShowToast("Drawing a card...");
         StartCoroutine(DrawCardWithAnimation(drawn));
@@ -1539,7 +1556,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         if (gameOver)
             return;
 
-        Debug.Log("Human pressed GO FISH");
+        // Debug.Log("Human pressed GO FISH");
 
         Card drawn = null;
         if (!GameModeManager.isOnlineMode)
@@ -1548,6 +1565,13 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
         else
         {
+            int myId = GetLocalPlayerId(NetworkManager.Singleton.LocalClientId);
+
+            Player myPlayer = players[myId];
+
+            Debug.Log(
+                $"[NET-FISH-BTN] {Dbg(myPlayer)} pressed Go Fish | requesting draw"
+            );
             NetworkGameManager.Instance.RequestDrawFromDeckRpc();
 
             waitingForDeckClick = false;
@@ -1620,6 +1644,9 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public void ApplyPublicState(ulong[] ids, int[] scores, int[] cardCounts)
     {
+        //         Debug.Log(
+        //     $"[NET-STATE] Synced {ids.Length} players"
+        // );
         if (players == null || activePlayers == null)
             return;
 
@@ -1658,9 +1685,12 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         if (players == null || playerIdToClientId.Count == 0)
             return;
-        Debug.Log("Applying PRIVATE hand");
+        // Debug.Log("Applying PRIVATE hand");
         // STEP 1: find MY player id
         int myId = GetLocalPlayerId(NetworkManager.Singleton.LocalClientId);
+        //         Debug.Log(
+        //     $"[NET-HAND] Applied {hand.Length} cards → {Dbg(players[myId])}"
+        // );
 
         if (myId == -1)
         {
@@ -1690,6 +1720,28 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
         return -1;
     }
+    public Player FindPlayerByNetworkId(ulong networkId)
+    {
+        foreach (var kvp in playerIdToClientId)
+        {
+            if (kvp.Value == networkId)
+            {
+                return players[kvp.Key];
+            }
+        }
+        return null;
+    }
+    public UIPlayer FindUIPlayerByNetworkId(ulong networkId)
+    {
+        Player player = FindPlayerByNetworkId(networkId);
+        if (player == null)
+            return null;
+        int uiIndex = GetUIIndex(player.PlayerID);
+        if (uiIndex >= 0 && uiIndex < uiPlayers.Length)
+            return uiPlayers[uiIndex];
+        return null;
+    }
+
 
     public void ApplyNetworkTurn(ulong clientId)
     {
@@ -1700,6 +1752,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             players[id]?.EndTurn();
         }
         currentPlayer = localId;
+        Debug.Log($"[NET-TURN] Turn → {Dbg(players[localId])}");
         players[localId].StartTurn();
 
         if (toastUI != null)
@@ -1710,7 +1763,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             ui.HideTurnPopupOnly();
         }
 
-        Debug.Log("Turn applied to: " + players[localId].PlayerName);
+        // Debug.Log("Turn applied to: " + players[localId].PlayerName);
 
         if (players[localId].IsHuman)
         {
@@ -1788,7 +1841,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             NetworkPlayer netPlayer = netPlayers[i];
             // GET PROFESSIONAL LOCAL SEAT
             int seatIndex = PlayerSeatMapper.Instance.GetSeatIndex(netPlayer.OwnerClientId);
-            Debug.Log("Client " + netPlayer.OwnerClientId + " mapped to seat " + seatIndex);
+            // Debug.Log("Client " + netPlayer.OwnerClientId + " mapped to seat " + seatIndex);
 
             // CREATE LOCAL PLAYER
             Player p = new Player(
@@ -1800,8 +1853,12 @@ public class GameManager : MonoBehaviour, ICardOwner
             );
             p.SeatId = seatIndex;
             p.NetworkId = netPlayer.OwnerClientId.ToString();
+            p.NetworkClientId = netPlayer.OwnerClientId;
             // STORE PLAYER USING SEAT INDEX
             players[seatIndex] = p;
+            Debug.Log(
+    $"[NET-INIT] {Dbg(p)} clientId:{netPlayer.OwnerClientId}"
+);
             // MAP SEAT -> REAL CLIENT ID
             playerIdToClientId[seatIndex] = netPlayer.OwnerClientId;
 
@@ -2012,42 +2069,67 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     IEnumerator PlayTurnResultCoroutine(TurnResultData data)
     {
-        Debug.Log("=== PLAY TURN RESULT RECEIVED ===");
-        Debug.Log("ASKER CLIENT: " + data.askerClientId);
-        Debug.Log("TARGET CLIENT: " + data.targetClientId);
-        Debug.Log("RANK: " + data.rank);
-        Debug.Log("SUCCESS: " + data.success);
-        Debug.Log("GO FISH: " + data.goFish);
+        // Debug.Log("=== PLAY TURN RESULT RECEIVED ===");
+        // Debug.Log("ASKER CLIENT: " + data.askerClientId);
+        // Debug.Log("TARGET CLIENT: " + data.targetClientId);
+        // Debug.Log("RANK: " + data.rank);
+        // Debug.Log("SUCCESS: " + data.success);
+        // Debug.Log("GO FISH: " + data.goFish);
 
-        int askerId = GetLocalPlayerId(data.askerClientId);
-        int targetId = GetLocalPlayerId(data.targetClientId);
-        if (askerId == -1 || targetId == -1)
+        Player asker = FindPlayerByNetworkId(data.askerClientId);
+        Player target = FindPlayerByNetworkId(data.targetClientId);
+        if (asker == null || target == null)
             yield break;
-        int askerUI = GetUIIndex(askerId);
-        int targetUI = GetUIIndex(targetId);
+        int askerId = asker.PlayerID;
+        int targetId = target.PlayerID;
+
+        Debug.Log(
+            $"[NET-RESULT] Asker:{Dbg(asker)} " +
+            $"Target:{Dbg(target)} " +
+            $"Rank:{data.rank} " +
+            $"Success:{data.success} " +
+            $"GoFish:{data.goFish}"
+        );
+
+        if (asker.PlayerID == -1 ||  target.PlayerID== -1)
+            yield break;
+        UIPlayer askerUI =
+    FindUIPlayerByNetworkId(data.askerClientId);
+
+        UIPlayer targetUI =
+            FindUIPlayerByNetworkId(data.targetClientId);
+
+        if (askerUI == null || targetUI == null)
+            yield break;
 
         turnActionRunning = true;
         // Only show ASK popup for SUCCESS and GO FISH Phase 1
         // Phase 2 already showed it earlier
         if (data.success || (data.goFish && data.waitingForDraw))
         {
-            Debug.Log(players[askerId].PlayerName + " asked " +
-            players[targetId].PlayerName + " for rank " + data.rank);
-            string targetName = players[targetId].PlayerName;
-            uiPlayers[askerUI].ShowAskPopup(targetName, data.rank);
+            Debug.Log(
+    $"{asker.PlayerName} [fromId:net:{data.askerClientId}] asked " +
+    $"{target.PlayerName} [toId:net:{data.targetClientId}] for rank {data.rank}"
+);
+            string targetName = players[target.PlayerID].PlayerName;
+            askerUI.ShowAskPopup(targetName, data.rank);
             yield return new WaitForSeconds(2f);
         }
 
         // CASE 1 — SUCCESS
         if (data.success)
         {
-            uiPlayers[targetUI].ShowReplyPopup(
+            targetUI.ShowReplyPopup(
                 true,
                 data.transferCount,
                 data.rank
             );
 
             yield return new WaitForSeconds(1.5f);
+            Debug.Log(
+    $"[NET-TRANSFER] {Dbg(target)} → {Dbg(asker)} | " +
+    $"{data.transferCount} cards rank:{data.rank}"
+);
 
             // Animate EVERY transferred card
             foreach (int cardValue in data.transferredCards)
@@ -2056,23 +2138,27 @@ public class GameManager : MonoBehaviour, ICardOwner
 
                 yield return StartCoroutine(
                     AnimateCardMove(
-                        uiPlayers[targetUI].transform,
-                        uiPlayers[askerUI].transform,
+                        targetUI.transform,
+                        askerUI.transform,
                         card,
-                        askerId
+                        asker.PlayerID
                     )
                 );
             }
 
             // Refresh synced hands
             RefreshAllHands();
-            uiPlayers[targetUI].HideTargetPopup();
+            targetUI.HideTargetPopup();
 
             // Book handling
             if (data.bookFormed)
             {
-                int bookLocalId =
-                    GetLocalPlayerId(data.bookPlayerClientId);
+                int bookLocalId = GetLocalPlayerId(data.bookPlayerClientId);
+                Player bookPlayer = players[bookLocalId];
+                Debug.Log(
+                    $"[NET-BOOK] {Dbg(bookPlayer)} completed book " +
+                    $"rank:{data.bookRank} score:{data.bookPlayerScore}"
+                );
 
                 int bookUI =
                     GetUIIndex(bookLocalId);
@@ -2103,12 +2189,12 @@ public class GameManager : MonoBehaviour, ICardOwner
                 }
                 yield return new WaitForSeconds(2f);
             }
-            uiPlayers[askerUI].HideTurnPopupOnly();
+            askerUI.HideTurnPopupOnly();
 
             UpdateDeckVisualCount(data.deckRemaining);
 
             // SUCCESS means same player continues
-            if (players[askerId].IsHuman)
+            if (players[asker.PlayerID].IsHuman)
             {
                 toastUI.ShowToast(
                     "You got cards! Select a rank card"
@@ -2129,14 +2215,18 @@ public class GameManager : MonoBehaviour, ICardOwner
         // CASE 2 — GO FISH PHASE 1
         if (data.goFish && data.waitingForDraw)
         {
-            uiPlayers[targetUI].ShowReplyPopup(
+            Debug.Log(
+    $"[NET-GOFISH-1] {Dbg(asker)} asks {Dbg(target)} " +
+    $"for rank:{data.rank} → GO FISH"
+);
+            targetUI.ShowReplyPopup(
                 false,
                 0,
                 data.rank
             );
 
             yield return new WaitForSeconds(1.5f);
-            uiPlayers[askerUI].HideTurnPopupOnly();
+            askerUI.HideTurnPopupOnly();
 
             // Enable deck click
             waitingForDeckClick = true;
@@ -2162,7 +2252,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             // Toast message
             if (toastUI != null)
             {
-                if (players[askerId].IsHuman)
+                if (players[asker.PlayerID].IsHuman)
                 {
                     toastUI.ShowToast(
                         "Go Fish! Click the deck or Fish icon"
@@ -2181,17 +2271,22 @@ public class GameManager : MonoBehaviour, ICardOwner
             !data.waitingForDraw &&
             data.drawnCardValue != -1)
         {
+            Debug.Log(
+    $"[NET-GOFISH-2] {Dbg(asker)} drew card:{data.drawnCardValue} " +
+    $"Lucky:{data.isLucky} Continue:{data.continueTurn} " +
+    $"DeckRemaining:{data.deckRemaining}"
+);
             RemoveTopDeckVisual();
-            uiPlayers[askerUI].HideTurnPopupOnly();
-            uiPlayers[targetUI].HideTargetPopup();
+            askerUI.HideTurnPopupOnly();
+            targetUI.HideTargetPopup();
             Card drawn = ConvertToCard(data.drawnCardValue);
 
             yield return StartCoroutine(
                 AnimateCardMove(
                     deckPosition,
-                    uiPlayers[askerUI].transform,
+                    askerUI.transform,
                     drawn,
-                    askerId
+                    asker.PlayerID
                 )
             );
 
@@ -2200,7 +2295,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             // Lucky draw popup
             if (data.isLucky)
             {
-                uiPlayers[askerUI]
+                askerUI
                     .ShowLuckyDrawPopup(drawn.Rank);
 
                 yield return new WaitForSeconds(2f);
@@ -2248,7 +2343,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             // CONTINUE TURN
             if (data.continueTurn)
             {
-                if (players[askerId].IsHuman)
+                if (players[asker.PlayerID].IsHuman)
                 {
                     toastUI.ShowToast(
                         "Your turn! Select a rank card"
