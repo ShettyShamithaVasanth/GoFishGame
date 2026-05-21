@@ -14,6 +14,11 @@ public class NetworkPlayer : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         Debug.Log($"[OnNetworkSpawn] Player: {OwnerClientId} | IsSever : {IsServer} | IsClient: {IsClient} | IsOwner: {IsOwner} |  LocalClientId:{NetworkManager.Singleton.LocalClientId}");
+        if (PlayerSeatMapper.Instance != null)
+        {
+            int seat =PlayerSeatMapper.Instance.GetSeatIndex(OwnerClientId);
+            Debug.Log( $"[Debug] Player spawned — seat_id:{seat} network_id:{OwnerClientId}" );
+        }
         if (IsServer && IsSpawned)
         {
 

@@ -9,6 +9,8 @@ public class Player
     public Hand PlayerHand;
     public int AvatarIndex;
     public int Score { get; private set; } = 0;
+    public int? SeatId;
+    public string NetworkId;
     public int LastBookTurn = int.MaxValue;
     // private int publicCardCount = 0;
 

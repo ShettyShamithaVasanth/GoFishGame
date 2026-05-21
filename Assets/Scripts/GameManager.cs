@@ -1798,6 +1798,8 @@ public class GameManager : MonoBehaviour, ICardOwner
                 NetworkManager.Singleton.LocalClientId,
                 netPlayer.avatarIndex.Value
             );
+            p.SeatId = seatIndex;
+            p.NetworkId = netPlayer.OwnerClientId.ToString();
             // STORE PLAYER USING SEAT INDEX
             players[seatIndex] = p;
             // MAP SEAT -> REAL CLIENT ID
@@ -2029,8 +2031,8 @@ public class GameManager : MonoBehaviour, ICardOwner
         // Phase 2 already showed it earlier
         if (data.success || (data.goFish && data.waitingForDraw))
         {
-            Debug.Log(players[askerId].PlayerName +" asked " + 
-            players[targetId].PlayerName +" for rank " +data.rank);
+            Debug.Log(players[askerId].PlayerName + " asked " +
+            players[targetId].PlayerName + " for rank " + data.rank);
             string targetName = players[targetId].PlayerName;
             uiPlayers[askerUI].ShowAskPopup(targetName, data.rank);
             yield return new WaitForSeconds(2f);

@@ -44,8 +44,14 @@ public class UIPlayer : MonoBehaviour, ICardOwner
             playerInstance.OnTurnChanged -= HandleTurnChanged;
 
         playerInstance = player;
-        // 🔥 HUMAN PLAYER USES PROFILE DATA
-        nameLabel.text = player.PlayerName;
+        //HUMAN PLAYER USES PROFILE DATA
+        string displayName = player.PlayerName;
+        if (player.SeatId.HasValue && !string.IsNullOrEmpty(player.NetworkId))
+        {
+            displayName += $" [seat:{player.SeatId.Value} net:{player.NetworkId}]";
+        }
+
+        nameLabel.text = displayName;
 
         if (profilePhoto != null)
         {
