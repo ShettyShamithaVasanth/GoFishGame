@@ -44,8 +44,22 @@ public class ConfirmQuitManager : MonoBehaviour
     {
         Time.timeScale = 1f;
 
-        GameOverUI.skipMenuOnReload = false;
-
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        if (GameModeManager.isOnlineMode)
+        {
+            confirmPanel.SetActive(false);
+            if (pausePanel != null)
+                pausePanel.SetActive(false);
+            if (gameOverPanel != null)
+                gameOverPanel.SetActive(false);
+            if (LobbyManager.Instance != null)
+            {
+                LobbyManager.Instance.QuitFromGame();
+            }
+        }
+        else
+        {
+            GameOverUI.skipMenuOnReload = false;
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
     }
 }

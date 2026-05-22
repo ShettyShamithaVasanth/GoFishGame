@@ -477,6 +477,45 @@ public class LobbyManager : MonoBehaviour
         }
     }
 
+    public void QuitFromGame()
+    {
+        Debug.Log("Quitting online game to menu...");
+        // 1. Leave the lobby service
+        if (currentLobby != null)
+        {
+            StartCoroutine(LeaveLobbyCoroutine());
+        }
+        // 2. Hide all game-related panels
+        enteringGamePanel?.SetActive(false);
+        lobbyPanel?.SetActive(false);
+        creatingRoomPanel?.SetActive(false);
+        friendsPanel?.SetActive(false);
+        matchmakingPanel?.SetActive(false);
+        modeSelectionPanel?.SetActive(false);
+
+        // 3. Hide game scene UI
+        GameSceneUI gameSceneUI = FindAnyObjectByType<GameSceneUI>();
+        if (gameSceneUI != null && gameSceneUI.gameScenePanel != null)
+        {
+            gameSceneUI.gameScenePanel.SetActive(false);
+        }
+        // 4. Shutdown network
+        if (NetworkManager.Singleton != null &&  NetworkManager.Singleton.IsListening)
+        {
+            NetworkManager.Singleton.Shutdown();
+            Debug.Log("Network Stopped.");
+        }
+
+        // 5. Reset online mode flag
+        GameModeManager.isOnlineMode = false;
+        // 6. Show menu background
+        menuBackground?.SetActive(true);
+        // 7. Show main menu UI
+        MenuController menu = FindAnyObjectByType<MenuController>();
+        if (menu != null && menu.MenuUI != null)
+            menu.MenuUI.SetActive(true);
+    }
+
     System.Collections.IEnumerator LeaveLobbyCoroutine()
     {
         var task = Unity.Services.Lobbies.LobbyService.Instance.RemovePlayerAsync(currentLobby.Id,

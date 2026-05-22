@@ -20,9 +20,15 @@ public class PauseManager : MonoBehaviour
     public void QuitGame()
     {
         Time.timeScale = 1f;
-
-        GameOverUI.skipMenuOnReload = false;
-
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        if (GameModeManager.isOnlineMode)
+        {
+            pausePanel.SetActive(false);
+            LobbyManager.Instance?.QuitFromGame();
+        }
+        else
+        {
+            GameOverUI.skipMenuOnReload = false;
+            SceneManager.LoadScene( SceneManager.GetActiveScene().name);
+        }
     }
 }
