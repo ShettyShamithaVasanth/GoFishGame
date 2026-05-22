@@ -900,7 +900,6 @@ public class GameManager : MonoBehaviour, ICardOwner
         {
             int id = activePlayers[i];
             bool showFront = players[id].IsHuman;
-
             uiPlayers[i].RefreshHand(showFront);
         }
     }
@@ -1697,7 +1696,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             Debug.LogError("My PlayerID not found ❌");
             return;
         }
-        
+
         // STEP 2: CLEAR OLD CARDS
         players[myId].PlayerHand.Clear();
         // STEP 3: ADD NEW CARDS
@@ -2150,6 +2149,8 @@ public class GameManager : MonoBehaviour, ICardOwner
             targetUI.HideTargetPopup();
 
             // Book handling
+            // FULL BOOK ANIMATION
+            // Book handling
             if (data.bookFormed)
             {
                 int bookLocalId = GetLocalPlayerId(data.bookPlayerClientId);
@@ -2281,13 +2282,13 @@ public class GameManager : MonoBehaviour, ICardOwner
             Card drawn = ConvertToCard(data.drawnCardValue);
 
             yield return StartCoroutine(
-                AnimateCardMove(
-                    deckPosition,
-                    askerUI.transform,
-                    drawn,
-                    asker.PlayerID
-                )
-            );
+     AnimateCardMove(
+         deckPosition,
+         askerUI.transform,
+         drawn,
+         asker.PlayerID
+     )
+ );
 
             RefreshAllHands();
 
@@ -2300,6 +2301,8 @@ public class GameManager : MonoBehaviour, ICardOwner
                 yield return new WaitForSeconds(2f);
             }
 
+            // Book handling
+            // FULL BOOK ANIMATION
             // Book handling
             if (data.bookFormed)
             {
@@ -2336,7 +2339,6 @@ public class GameManager : MonoBehaviour, ICardOwner
 
                 yield return new WaitForSeconds(2f);
             }
-
             UpdateDeckVisualCount(data.deckRemaining);
 
             // CONTINUE TURN
