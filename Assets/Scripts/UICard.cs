@@ -51,6 +51,7 @@ public class UICard : MonoBehaviour
         }
         cardRank = rank;
         owner = ownerPlayer;
+        SetSortingOrder(sortingOrder);
         // Hidden opponent card
         if (rank <= 0)
         {
@@ -61,13 +62,10 @@ public class UICard : MonoBehaviour
         }
 
         string rankString = cardData.GetRankString(rank);
-
         rankTop.text = rankString;
         rankBottom.text = rankString;
-
         suitRenderer.sprite = suitSprite;
         cardColor.color = suitColor;
-        SetSortingOrder(sortingOrder);
     }
 
     public void ShowFront(bool show)

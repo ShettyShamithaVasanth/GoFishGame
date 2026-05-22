@@ -1697,6 +1697,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             Debug.LogError("My PlayerID not found ❌");
             return;
         }
+        
         // STEP 2: CLEAR OLD CARDS
         players[myId].PlayerHand.Clear();
         // STEP 3: ADD NEW CARDS
