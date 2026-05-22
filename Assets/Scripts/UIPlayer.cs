@@ -95,9 +95,8 @@ public class UIPlayer : MonoBehaviour, ICardOwner
         if (isMyTurn)
         {
             StartTurnAnimation();
-
-            // ⭐ ONLY AI should auto show popup
-            if (!player.IsHuman)
+            //ONLY AI should auto show popup
+            if (!player.IsHuman && !GameModeManager.isOnlineMode)
             {
                 ShowCurrentPlayerPopup();
             }

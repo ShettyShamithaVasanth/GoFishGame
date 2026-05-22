@@ -813,7 +813,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             ulong targetClientId = playerIdToClientId[targetID];
             Debug.Log($"[NET-ASK] {Dbg(askingPlayer)} → {Dbg(targetPlayer)} " +
             $"rank:{selectedRank} targetClientId:{targetClientId}");
-            currentTargetUI.ShowTargetPopup();
+            // currentTargetUI.ShowTargetPopup();
             if (!playerIdToClientId.ContainsKey(targetID))
             {
                 Debug.LogError("Target ClientID not found");
@@ -1890,6 +1890,8 @@ public class GameManager : MonoBehaviour, ICardOwner
         {
             activeList.Add(kvp.Key);
         }
+        // Always keep seats sorted: 0,1,2,3
+        activeList.Sort();
         activePlayers = activeList.ToArray();
         // deck = new Deck(this);
 
@@ -2091,14 +2093,10 @@ public class GameManager : MonoBehaviour, ICardOwner
             $"GoFish:{data.goFish}"
         );
 
-        if (asker.PlayerID == -1 ||  target.PlayerID== -1)
+        if (asker.PlayerID == -1 || target.PlayerID == -1)
             yield break;
-        UIPlayer askerUI =
-    FindUIPlayerByNetworkId(data.askerClientId);
-
-        UIPlayer targetUI =
-            FindUIPlayerByNetworkId(data.targetClientId);
-
+        UIPlayer askerUI = FindUIPlayerByNetworkId(data.askerClientId);
+        UIPlayer targetUI = FindUIPlayerByNetworkId(data.targetClientId);
         if (askerUI == null || targetUI == null)
             yield break;
 
