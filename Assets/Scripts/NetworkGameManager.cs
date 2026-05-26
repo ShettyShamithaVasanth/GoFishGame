@@ -60,6 +60,9 @@ public class NetworkGameManager : NetworkBehaviour
     private ulong pendingDrawTargetId = ulong.MaxValue;
     public NetworkVariable<int> deckRemainingCards = new NetworkVariable<int>(0);
 
+    private Dictionary<ulong, HashSet<string>> serverAskedThisTurn = new Dictionary<ulong, HashSet<string>>();
+    private HashSet<int> serverCompletedRanks = new HashSet<int>();
+
     private void Awake()
     {
         Instance = this;
@@ -173,7 +176,7 @@ public class NetworkGameManager : NetworkBehaviour
 
             yield return null;
         }
-        Debug.Log("Network Players READY"+ netPlayers.Length);
+        Debug.Log("Network Players READY" + netPlayers.Length);
 
         // EXTRA SAFETY WAIT
         yield return new WaitForSeconds(2f);
@@ -342,6 +345,8 @@ public class NetworkGameManager : NetworkBehaviour
 
     void DealCardsToPlayers()
     {
+        serverAskedThisTurn.Clear();
+        serverCompletedRanks.Clear();
         if (!IsServer) return;
         int cardsPerPlayer = 7;
         var players = NetworkPlayerManager.Instance.players;
@@ -399,6 +404,7 @@ public class NetworkGameManager : NetworkBehaviour
     $"[SERVER-NEXT-TURN] FROM Client:{currentTurnPlayerId.Value} " +
     $"TO Client:{players[nextIndex].OwnerClientId}"
 );
+        serverAskedThisTurn.Clear();
         currentTurnPlayerId.Value = players[nextIndex].OwnerClientId;
     }
 
@@ -406,6 +412,14 @@ public class NetworkGameManager : NetworkBehaviour
     public void RequestCardRpc(int rank, ulong targetId, RpcParams rpcParams = default)
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
+        if (!serverAskedThisTurn.ContainsKey(senderId))
+        {
+            serverAskedThisTurn[senderId] =
+                new HashSet<string>();
+        }
+
+        serverAskedThisTurn[senderId]
+            .Add(targetId + "_" + rank);
         Debug.Log(
     $"[SERVER-ASK] FROM Client:{senderId} " +
     $"TO Client:{targetId} rank:{rank}"
@@ -457,10 +471,20 @@ public class NetworkGameManager : NetworkBehaviour
                 result.bookPlayerClientId = sender.OwnerClientId;
                 result.bookPlayerScore = sender.score.Value;
             }
+            result.continueTurn = GameRules.HasValidMovesServer(
+    players,
+    sender,
+    serverAskedThisTurn,
+    serverCompletedRanks
+);
 
-            result.continueTurn = true;
+            if (!result.continueTurn)
+            {
+                NextTurn();
 
-            result.deckRemaining = NetworkDeckManager.Instance.deck.Count;
+                result.nextTurnClientId =
+                    currentTurnPlayerId.Value;
+            }
         }
         else
         {
@@ -535,9 +559,7 @@ public class NetworkGameManager : NetworkBehaviour
                 (drawnRank == pendingDrawAskedRank);
 
             int bookedRank = CheckForBook(sender);
-
             result.bookFormed = bookedRank != -1;
-
             if (result.bookFormed)
             {
                 result.bookRank = bookedRank;
@@ -550,7 +572,21 @@ public class NetworkGameManager : NetworkBehaviour
 
             if (result.isLucky)
             {
-                result.continueTurn = true;
+                result.continueTurn =
+                    GameRules.HasValidMovesServer(
+                        players,
+                        sender,
+                        serverAskedThisTurn,
+                        serverCompletedRanks
+                    );
+
+                if (!result.continueTurn)
+                {
+                    NextTurn();
+
+                    result.nextTurnClientId =
+                        currentTurnPlayerId.Value;
+                }
             }
             else
             {
@@ -665,7 +701,7 @@ public class NetworkGameManager : NetworkBehaviour
                 player.hand.RemoveAll(c => (c / 10) == bookedRank);
 
                 player.completedBooks.Add(bookedRank);
-
+                serverCompletedRanks.Add(bookedRank);
                 player.score.Value++;
                 Debug.Log(
     $"[SERVER-BOOK] Player Client:{player.OwnerClientId} " +

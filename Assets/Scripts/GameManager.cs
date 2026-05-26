@@ -525,6 +525,17 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     //     StartCurrentTurn();
     // }
+
+    private bool CurrentPlayerHasValidMoves()
+    {
+        return GameRules.HasValidMoves(
+            players,
+            activePlayers,
+            currentPlayer,
+            askedRankTargetThisTurn,
+            completedRanks
+        );
+    }
     public Player GetCurrentPlayer()
     {
         return players[currentPlayer];
@@ -1185,10 +1196,24 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         turnActionRunning = false;
 
+        turnActionRunning = false;
+
         // ⭐ continue asking only AFTER book logic finishes
         if (!players[toID].IsHuman && !gameOver)
         {
             Invoke(nameof(AISelectRandomTarget), 2.2f);
+        }
+        else if (players[toID].IsHuman && !gameOver)
+        {
+            if (!CurrentPlayerHasValidMoves())
+            {
+                toastUI.ShowToastWithAutoHide(
+                    "No valid moves left. Turn ending.",
+                    2.5f
+                );
+
+                EndTurn();
+            }
         }
     }
 
@@ -1301,7 +1326,24 @@ public class GameManager : MonoBehaviour, ICardOwner
             int uiIndex2 = GetUIIndex(currentPlayer);
             uiPlayers[uiIndex2].ShowLuckyDrawPopup(drawn.Rank);
             if (!players[currentPlayer].IsHuman)
+            {
                 Invoke(nameof(AISelectRandomTarget), 2.1f);
+            }
+            else
+            {
+                // humanlucky draw → show toast and let them select again
+                toastUI.ShowToastWithAutoHide("Lucky draw! You get another turn.", 2.5f);
+                // valid moves check
+                if (!CurrentPlayerHasValidMoves())
+                {
+                    toastUI.ShowToastWithAutoHide(
+                        "No valid moves left. Turn ending.",
+                        2.5f
+                    );
+
+                    EndTurn();
+                }
+            }
         }
         else
         {
@@ -1325,7 +1367,21 @@ public class GameManager : MonoBehaviour, ICardOwner
         // ⭐ SHOW NEXT INSTRUCTION ONLY IF HUMAN TURN CONTINUES
         if (players[currentPlayer].IsHuman && !gameOver)
         {
-            toastUI.ShowToast("Your turn! Select a rank card");
+            if (CurrentPlayerHasValidMoves())
+            {
+                toastUI.ShowToast(
+                    "Your turn! Select a rank card"
+                );
+            }
+            else
+            {
+                toastUI.ShowToastWithAutoHide(
+                    "No valid moves left. Turn ending.",
+                    2.5f
+                );
+
+                EndTurn();
+            }
         }
 
     }
@@ -2248,18 +2304,37 @@ public class GameManager : MonoBehaviour, ICardOwner
                 yield return new WaitForSeconds(2f);
             }
             askerUI.HideTurnPopupOnly();
-
-            UpdateDeckVisualCount(data.deckRemaining);
+            // UpdateDeckVisualCount(data.deckRemaining);
 
             // SUCCESS means same player continues
-            if (players[asker.PlayerID].IsHuman)
+            if (data.continueTurn)
             {
-                toastUI.ShowToast(
-                    "You got cards! Select a rank card"
-                );
+                if (players[asker.PlayerID].IsHuman)
+                {
+                    toastUI.ShowToast(
+                        "You got cards! Select a rank card"
+                    );
+                }
+            }
+            else
+            {
+                if (players[asker.PlayerID].IsHuman)
+                {
+                    toastUI.ShowToastWithAutoHide(
+                        "No valid moves left. Turn ending.",
+                        2.5f
+                    );
+                }
+
+                selectedRank = -1;
+                waitingForTarget = false;
+                waitingForDeckClick = false;
+                lockTargetSelection = false;
+                turnActionRunning = false;
+
+                yield break;
             }
 
-            // RESET FLAGS
             selectedRank = -1;
             waitingForTarget = false;
             waitingForDeckClick = false;
@@ -2432,19 +2507,19 @@ public class GameManager : MonoBehaviour, ICardOwner
             {
                 if (players[asker.PlayerID].IsHuman)
                 {
-                    toastUI.ShowToast(
-                        "Your turn! Select a rank card"
-                    );
-                }
-            }
-            else
-            {
-                // Turn already handled by ApplyNetworkTurn
-                // Just clean all popups
-                foreach (UIPlayer ui in uiPlayers)
-                {
-                    ui.HideTargetPopup();
-                    ui.HideTurnPopupOnly();
+                    if (CurrentPlayerHasValidMoves())
+                    {
+                        toastUI.ShowToast(
+                            "Your turn! Select a rank card"
+                        );
+                    }
+                    else
+                    {
+                        toastUI.ShowToastWithAutoHide(
+                            "No valid moves left. Turn ending.",
+                            2.5f
+                        );
+                    }
                 }
             }
 
