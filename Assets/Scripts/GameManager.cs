@@ -2188,7 +2188,9 @@ public class GameManager : MonoBehaviour, ICardOwner
             {
                 int bookLocalId =
                     GetLocalPlayerId(data.bookPlayerClientId);
-
+                if (toastUI != null)
+                    toastUI.ShowToast("Book forming...");
+                yield return new WaitForSeconds(1.5f);
                 yield return StartCoroutine(
                     AnimateOnlineBook(
                         bookLocalId,
@@ -2364,7 +2366,9 @@ public class GameManager : MonoBehaviour, ICardOwner
             {
                 int bookLocalId =
                     GetLocalPlayerId(data.bookPlayerClientId);
-
+                if (toastUI != null)
+                    toastUI.ShowToast("Book forming...");
+                yield return new WaitForSeconds(1.5f);
                 yield return StartCoroutine(
                     AnimateOnlineBook(
                         bookLocalId,
