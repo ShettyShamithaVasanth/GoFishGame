@@ -673,11 +673,11 @@ public class NetworkGameManager : NetworkBehaviour
     $"score:{player.score.Value}"
 );
 
-                BookCreatedClientRpc(
-                    player.OwnerClientId,
-                    bookedRank,
-                    player.score.Value
-                );
+                // BookCreatedClientRpc(
+                //     player.OwnerClientId,
+                //     bookedRank,
+                //     player.score.Value
+                // );
             }
         }
 

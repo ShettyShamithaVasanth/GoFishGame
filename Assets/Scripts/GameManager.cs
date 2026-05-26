@@ -1474,7 +1474,40 @@ public class GameManager : MonoBehaviour, ICardOwner
         //     lastDeckCardDrawn = false;
         // }
         bookJustFormed = false; // 🔥 safety reset
+    }
 
+    IEnumerator AnimateOnlineBook(int playerID, int rank)
+    {
+        int uiIndex = GetUIIndex(playerID);
+
+        Transform playerTransform =
+            uiPlayers[uiIndex].transform;
+
+        if (toastUI != null)
+        {
+            if (players[playerID].IsHuman)
+                toastUI.ShowToast("Book forming...");
+            else
+                toastUI.ShowToast(
+                    players[playerID].PlayerName +
+                    " book forming..."
+                );
+        }
+
+        List<Card> bookCards =
+            ReconstructBookCards(rank);
+
+        foreach (Card c in bookCards)
+        {
+            yield return StartCoroutine(
+                AnimateCardMove(
+                    playerTransform,
+                    playerTransform,
+                    c,
+                    playerID
+                )
+            );
+        }
     }
 
     void TriggerGameOver()
@@ -1791,13 +1824,13 @@ public class GameManager : MonoBehaviour, ICardOwner
         players[localId].SetScore(score);
         int uiIndex = GetUIIndex(localId);
         uiPlayers[uiIndex].UpdateScore(score);
-        if (toastUI != null)
-        {
-            if (players[localId].IsHuman)
-                toastUI.ShowToastWithAutoHide("You completed a book!", 3f);
-            else
-                toastUI.ShowToastWithAutoHide(players[localId].PlayerName + " completed a book!", 3f);
-        }
+        // if (toastUI != null)
+        // {
+        //     if (players[localId].IsHuman)
+        //         toastUI.ShowToastWithAutoHide("You completed a book!", 3f);
+        //     else
+        //         toastUI.ShowToastWithAutoHide(players[localId].PlayerName + " completed a book!", 3f);
+        // }
     }
 
     public void InitializeMultiplayer()
@@ -2153,20 +2186,40 @@ public class GameManager : MonoBehaviour, ICardOwner
             // Book handling
             if (data.bookFormed)
             {
-                int bookLocalId = GetLocalPlayerId(data.bookPlayerClientId);
-                Player bookPlayer = players[bookLocalId];
-                Debug.Log(
-                    $"[NET-BOOK] {Dbg(bookPlayer)} completed book " +
-                    $"rank:{data.bookRank} score:{data.bookPlayerScore}"
+                int bookLocalId =
+                    GetLocalPlayerId(data.bookPlayerClientId);
+
+                yield return StartCoroutine(
+                    AnimateOnlineBook(
+                        bookLocalId,
+                        data.bookRank
+                    )
                 );
 
-                int bookUI =
-                    GetUIIndex(bookLocalId);
+                int myLocalId =
+                    GetLocalPlayerId(
+                        NetworkManager.Singleton.LocalClientId
+                    );
+
+                if (bookLocalId == myLocalId)
+                {
+                    List<Card> toRemove =
+                        players[bookLocalId]
+                        .PlayerHand
+                        .GetCardsByRank(data.bookRank);
+
+                    foreach (Card c in toRemove)
+                    {
+                        players[bookLocalId]
+                            .PlayerHand
+                            .RemoveCard(c);
+                    }
+                }
 
                 players[bookLocalId]
                     .SetScore(data.bookPlayerScore);
 
-                uiPlayers[bookUI]
+                uiPlayers[GetUIIndex(bookLocalId)]
                     .UpdateScore(data.bookPlayerScore);
 
                 if (toastUI != null)
@@ -2187,6 +2240,9 @@ public class GameManager : MonoBehaviour, ICardOwner
                         );
                     }
                 }
+
+                RefreshAllHands();
+
                 yield return new WaitForSeconds(2f);
             }
             askerUI.HideTurnPopupOnly();
@@ -2309,13 +2365,37 @@ public class GameManager : MonoBehaviour, ICardOwner
                 int bookLocalId =
                     GetLocalPlayerId(data.bookPlayerClientId);
 
-                int bookUI =
-                    GetUIIndex(bookLocalId);
+                yield return StartCoroutine(
+                    AnimateOnlineBook(
+                        bookLocalId,
+                        data.bookRank
+                    )
+                );
+
+                int myLocalId =
+                    GetLocalPlayerId(
+                        NetworkManager.Singleton.LocalClientId
+                    );
+
+                if (bookLocalId == myLocalId)
+                {
+                    List<Card> toRemove =
+                        players[bookLocalId]
+                        .PlayerHand
+                        .GetCardsByRank(data.bookRank);
+
+                    foreach (Card c in toRemove)
+                    {
+                        players[bookLocalId]
+                            .PlayerHand
+                            .RemoveCard(c);
+                    }
+                }
 
                 players[bookLocalId]
                     .SetScore(data.bookPlayerScore);
 
-                uiPlayers[bookUI]
+                uiPlayers[GetUIIndex(bookLocalId)]
                     .UpdateScore(data.bookPlayerScore);
 
                 if (toastUI != null)
@@ -2336,6 +2416,8 @@ public class GameManager : MonoBehaviour, ICardOwner
                         );
                     }
                 }
+
+                RefreshAllHands();
 
                 yield return new WaitForSeconds(2f);
             }
@@ -2372,6 +2454,16 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
     }
 
+    List<Card> ReconstructBookCards(int rank)
+    {
+        return new List<Card>
+    {
+        new Card(rank, CardSuit.Spade),
+        new Card(rank, CardSuit.Heart),
+        new Card(rank, CardSuit.Diamond),
+        new Card(rank, CardSuit.Club)
+    };
+    }
     Card ConvertToCard(int value)
     {
         int rank = value / 10;
