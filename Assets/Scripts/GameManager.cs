@@ -948,15 +948,7 @@ public class GameManager : MonoBehaviour, ICardOwner
         {
             Card drawn;
 
-            if (GameModeManager.isOnlineMode)
-            {
-                Debug.Log("ONLINE MODE → refill handled by server");
-                yield break;
-            }
-            else
-            {
-                drawn = deck.GetCard();
-            }
+            drawn = deck.GetCard();
 
             if (drawn == null)
                 yield break;
@@ -1579,7 +1571,10 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         gameOver = true;
         // ⭐ STEP 1 — INCREASE GAMES PLAYED
-        ProfileData.GamesPlayed++;
+        if (!GameModeManager.isOnlineMode)
+        {
+            ProfileData.GamesPlayed++;
+        }
 
         Debug.Log("GAME OVER TRIGGERED");
         // ⭐ DEBUG PRINT — PLAYER AVATAR MAPPING (END)
@@ -1621,10 +1616,13 @@ public class GameManager : MonoBehaviour, ICardOwner
             Debug.Log("AI WON!");
         }
         // ⭐ STEP 4 — SAVE TO CLOUD
-        PlayFabProfileManager.Instance.SaveProfile(
-            ProfileData.PlayerName,
-            ProfileSaveSystem.LoadAvatarIndex()
-        );
+        if (!GameModeManager.isOnlineMode)
+        {
+            PlayFabProfileManager.Instance.SaveProfile(
+                ProfileData.PlayerName,
+                ProfileSaveSystem.LoadAvatarIndex()
+            );
+        }
         gameOverUI.ShowGameOver(players);
     }
 
@@ -2301,6 +2299,42 @@ public class GameManager : MonoBehaviour, ICardOwner
 
                 RefreshAllHands();
 
+                if (data.handRefillCards != null &&
+    data.handRefillCards.Length > 0)
+                {
+                    int refillPlayerId =
+                        GetLocalPlayerId(
+                            data.handRefillClientId
+                        );
+
+                    UIPlayer refillUI =
+                        uiPlayers[GetUIIndex(refillPlayerId)];
+
+                    foreach (int value in data.handRefillCards)
+                    {
+                        Card refillCard =
+                            ConvertToCard(value);
+
+                        yield return StartCoroutine(
+                            AnimateCardMove(
+                                deckPosition,
+                                refillUI.transform,
+                                refillCard,
+                                refillPlayerId
+                            )
+                        );
+                    }
+
+                    RefreshAllHands();
+
+                    if (toastUI != null)
+                    {
+                        toastUI.ShowToastWithAutoHide(
+                            "Drew new cards from deck",
+                            2f
+                        );
+                    }
+                }
                 yield return new WaitForSeconds(2f);
             }
             askerUI.HideTurnPopupOnly();
@@ -2342,6 +2376,15 @@ public class GameManager : MonoBehaviour, ICardOwner
 
             turnActionRunning = false;
 
+            if (data.isGameOver)
+            {
+                ModeSelectionController.selectedPlayers =
+                    data.gameOverPlayerCount;
+
+                TriggerGameOver();
+
+                yield break;
+            }
             yield break;
         }
 
@@ -2498,6 +2541,42 @@ public class GameManager : MonoBehaviour, ICardOwner
 
                 RefreshAllHands();
 
+                if (data.handRefillCards != null &&
+    data.handRefillCards.Length > 0)
+                {
+                    int refillPlayerId =
+                        GetLocalPlayerId(
+                            data.handRefillClientId
+                        );
+
+                    UIPlayer refillUI =
+                        uiPlayers[GetUIIndex(refillPlayerId)];
+
+                    foreach (int value in data.handRefillCards)
+                    {
+                        Card refillCard =
+                            ConvertToCard(value);
+
+                        yield return StartCoroutine(
+                            AnimateCardMove(
+                                deckPosition,
+                                refillUI.transform,
+                                refillCard,
+                                refillPlayerId
+                            )
+                        );
+                    }
+
+                    RefreshAllHands();
+
+                    if (toastUI != null)
+                    {
+                        toastUI.ShowToastWithAutoHide(
+                            "Drew new cards from deck",
+                            2f
+                        );
+                    }
+                }
                 yield return new WaitForSeconds(2f);
             }
             UpdateDeckVisualCount(data.deckRemaining);
@@ -2529,6 +2608,16 @@ public class GameManager : MonoBehaviour, ICardOwner
             waitingForDeckClick = false;
             lockTargetSelection = false;
             turnActionRunning = false;
+
+            if (data.isGameOver)
+            {
+                ModeSelectionController.selectedPlayers =
+                    data.gameOverPlayerCount;
+
+                TriggerGameOver();
+
+                yield break;
+            }
             yield break;
         }
     }

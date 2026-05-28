@@ -18,7 +18,23 @@ public class GameOverUI : MonoBehaviour
     {
         gameOverPanel.SetActive(true);
 
-        int activePlayers = ModeSelectionController.selectedPlayers;
+        int activePlayers;
+
+        if (GameModeManager.isOnlineMode)
+        {
+            activePlayers = 0;
+
+            foreach (var p in players)
+            {
+                if (p != null)
+                    activePlayers++;
+            }
+        }
+        else
+        {
+            activePlayers =
+                ModeSelectionController.selectedPlayers;
+        }
 
         // sort players by score (highest first)
         var sortedPlayers = players

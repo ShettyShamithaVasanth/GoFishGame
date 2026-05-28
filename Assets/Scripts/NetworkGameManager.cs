@@ -25,6 +25,33 @@ public struct TurnResultData : INetworkSerializable
     public ulong nextTurnClientId;
     public int deckRemaining;
 
+    public int[] handRefillCards;
+    public ulong handRefillClientId;
+
+    public bool isGameOver;
+
+    public int[] gameOverScores;
+    public ulong[] gameOverPlayerIds;
+    public int[] gameOverAvatarIndices;
+    public bool[] gameOverIsHuman;
+
+    public int gameOverPlayerCount;
+    public void InitializeArrays()
+    {
+        transferredCards ??= new int[0];
+
+        handRefillCards ??= new int[0];
+
+        gameOverScores ??= new int[0];
+
+        gameOverPlayerIds ??= new ulong[0];
+
+        gameOverAvatarIndices ??= new int[0];
+
+        gameOverIsHuman ??= new bool[0];
+    }
+
+
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
         serializer.SerializeValue(ref askerClientId);
@@ -44,6 +71,18 @@ public struct TurnResultData : INetworkSerializable
         serializer.SerializeValue(ref continueTurn);
         serializer.SerializeValue(ref nextTurnClientId);
         serializer.SerializeValue(ref deckRemaining);
+
+        serializer.SerializeValue(ref handRefillCards);
+        serializer.SerializeValue(ref handRefillClientId);
+
+        serializer.SerializeValue(ref isGameOver);
+
+        serializer.SerializeValue(ref gameOverScores);
+        serializer.SerializeValue(ref gameOverPlayerIds);
+        serializer.SerializeValue(ref gameOverAvatarIndices);
+        serializer.SerializeValue(ref gameOverIsHuman);
+
+        serializer.SerializeValue(ref gameOverPlayerCount);
     }
 }
 
@@ -443,6 +482,7 @@ public class NetworkGameManager : NetworkBehaviour
             rank = rank
         };
 
+        result.InitializeArrays();
         if (target.HasRank(rank))
         {
             var cards = target.RemoveCardsByRank(rank);
@@ -471,6 +511,21 @@ public class NetworkGameManager : NetworkBehaviour
                 result.bookPlayerClientId = sender.OwnerClientId;
                 result.bookPlayerScore = sender.score.Value;
             }
+
+            int[] refillCards =
+    RefillHandIfEmpty(sender);
+
+            result.handRefillCards = refillCards;
+
+            result.handRefillClientId =
+                refillCards.Length > 0
+                ? sender.OwnerClientId
+                : ulong.MaxValue;
+
+            FillGameOverData(ref result);
+
+            result.deckRemaining =
+                NetworkDeckManager.Instance.deck.Count;
             result.continueTurn = GameRules.HasValidMovesServer(
     players,
     sender,
@@ -506,12 +561,19 @@ public class NetworkGameManager : NetworkBehaviour
     $"[SERVER-GOFISH] FROM Client:{senderId} " +
     $"TO DECK | pendingDraw:{senderId}"
 );
+            result.InitializeArrays();
+
             TurnResultClientRpc(result);
+
             StartCoroutine(DelayedStateSync(5f));
+
             return;
         }
 
+        result.InitializeArrays();
+
         TurnResultClientRpc(result);
+
         StartCoroutine(DelayedStateSync(5f));
     }
 
@@ -535,6 +597,8 @@ public class NetworkGameManager : NetworkBehaviour
             return;
 
         TurnResultData result = new TurnResultData();
+
+        result.InitializeArrays();
         result.transferredCards = new int[0];
         result.askerClientId = senderId;
         result.targetClientId = pendingDrawTargetId;
@@ -570,6 +634,15 @@ public class NetworkGameManager : NetworkBehaviour
                     sender.score.Value;
             }
 
+            int[] refillCards =
+    RefillHandIfEmpty(sender);
+
+            result.handRefillCards = refillCards;
+
+            result.handRefillClientId =
+                refillCards.Length > 0
+                ? sender.OwnerClientId
+                : ulong.MaxValue;
             if (result.isLucky)
             {
                 result.continueTurn =
@@ -601,7 +674,6 @@ public class NetworkGameManager : NetworkBehaviour
         else
         {
             result.drawnCardValue = -1;
-
             result.continueTurn = false;
 
             NextTurn();
@@ -612,7 +684,7 @@ public class NetworkGameManager : NetworkBehaviour
 
         result.deckRemaining =
             NetworkDeckManager.Instance.deck.Count;
-
+        FillGameOverData(ref result);
         pendingDrawPlayerId = ulong.MaxValue;
         Debug.Log(
     $"[SERVER-DRAW-RESULT] FROM DECK " +
@@ -624,7 +696,10 @@ public class NetworkGameManager : NetworkBehaviour
         pendingDrawAskedRank = -1;
         pendingDrawTargetId = ulong.MaxValue;
 
+        result.InitializeArrays();
+
         TurnResultClientRpc(result);
+
         StartCoroutine(DelayedStateSync(2.5f));
     }
 
@@ -718,6 +793,87 @@ public class NetworkGameManager : NetworkBehaviour
         }
 
         return bookedRank;
+    }
+
+    int[] RefillHandIfEmpty(NetworkPlayer player)
+    {
+        if (player.hand.Count > 0)
+            return new int[0];
+
+        Debug.Log(
+            $"[SERVER-REFILL] Player:{player.OwnerClientId} hand empty"
+        );
+
+        List<int> drawnCards = new List<int>();
+
+        int drawCount = Mathf.Min(
+            5,
+            NetworkDeckManager.Instance.deck.Count
+        );
+
+        for (int i = 0; i < drawCount; i++)
+        {
+            int card = NetworkDeckManager.Instance.DrawCard();
+
+            if (card == -1)
+                break;
+
+            player.AddCard(card);
+
+            drawnCards.Add(card);
+        }
+
+        deckRemainingCards.Value =
+            NetworkDeckManager.Instance.deck.Count;
+
+        Debug.Log(
+            $"[SERVER-REFILL] Drew {drawnCards.Count} cards"
+        );
+
+        return drawnCards.ToArray();
+    }
+
+    void FillGameOverData(ref TurnResultData result)
+    {
+        if (NetworkDeckManager.Instance.deck.Count > 0)
+            return;
+
+        var players = NetworkPlayerManager.Instance.players;
+
+        result.isGameOver = true;
+
+        result.gameOverScores =
+            new int[players.Count];
+
+        result.gameOverPlayerIds =
+            new ulong[players.Count];
+
+        result.gameOverAvatarIndices =
+            new int[players.Count];
+
+        result.gameOverIsHuman =
+            new bool[players.Count];
+
+        result.gameOverPlayerCount =
+            players.Count;
+
+        for (int i = 0; i < players.Count; i++)
+        {
+            result.gameOverScores[i] =
+                players[i].score.Value;
+
+            result.gameOverPlayerIds[i] =
+                players[i].OwnerClientId;
+
+            result.gameOverAvatarIndices[i] =
+                players[i].avatarIndex.Value;
+
+            result.gameOverIsHuman[i] =
+                players[i].OwnerClientId ==
+                NetworkManager.Singleton.LocalClientId;
+        }
+
+        Debug.Log("[SERVER-GAMEOVER] Game Over Broadcasted");
     }
 
     [ClientRpc]
