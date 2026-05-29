@@ -1580,8 +1580,13 @@ public class GameManager : MonoBehaviour, ICardOwner
         // ⭐ DEBUG PRINT — PLAYER AVATAR MAPPING (END)
         Debug.Log("=== GAME END PLAYER AVATAR DATA ===");
 
-        foreach (Player p in players)
+        foreach (int id in activePlayers)
         {
+            Player p = players[id];
+
+            if (p == null)
+                continue;
+
             Debug.Log("PlayerID: " + p.PlayerID +
                       " | Name: " + p.PlayerName +
                       " | AvatarIndex: " + p.AvatarIndex +
@@ -1603,7 +1608,19 @@ public class GameManager : MonoBehaviour, ICardOwner
             ui.canInteract = false;
         }
         // ⭐ STEP 2 — FIND WINNER
-        Player winner = GameRules.GetWinner(players);
+        List<Player> validPlayers =
+    new List<Player>();
+
+        foreach (int id in activePlayers)
+        {
+            if (players[id] != null)
+                validPlayers.Add(players[id]);
+        }
+
+        Player winner =
+            GameRules.GetWinner(
+                validPlayers.ToArray()
+            );
 
         // ⭐ STEP 3 — IF HUMAN WON → INCREASE
         if (winner.IsHuman)
@@ -2340,6 +2357,17 @@ public class GameManager : MonoBehaviour, ICardOwner
             askerUI.HideTurnPopupOnly();
             // UpdateDeckVisualCount(data.deckRemaining);
 
+            UpdateDeckVisualCount(data.deckRemaining);
+
+            if (data.isGameOver)
+            {
+                ModeSelectionController.selectedPlayers =
+                    data.gameOverPlayerCount;
+
+                TriggerGameOver();
+
+                yield break;
+            }
             // SUCCESS means same player continues
             if (data.continueTurn)
             {
@@ -2376,15 +2404,15 @@ public class GameManager : MonoBehaviour, ICardOwner
 
             turnActionRunning = false;
 
-            if (data.isGameOver)
-            {
-                ModeSelectionController.selectedPlayers =
-                    data.gameOverPlayerCount;
+            // if (data.isGameOver)
+            // {
+            //     ModeSelectionController.selectedPlayers =
+            //         data.gameOverPlayerCount;
 
-                TriggerGameOver();
+            //     TriggerGameOver();
 
-                yield break;
-            }
+            //     yield break;
+            // }
             yield break;
         }
 

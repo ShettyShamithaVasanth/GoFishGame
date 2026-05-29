@@ -868,9 +868,7 @@ public class NetworkGameManager : NetworkBehaviour
             result.gameOverAvatarIndices[i] =
                 players[i].avatarIndex.Value;
 
-            result.gameOverIsHuman[i] =
-                players[i].OwnerClientId ==
-                NetworkManager.Singleton.LocalClientId;
+            result.gameOverIsHuman[i] = true;
         }
 
         Debug.Log("[SERVER-GAMEOVER] Game Over Broadcasted");

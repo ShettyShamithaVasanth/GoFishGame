@@ -26,12 +26,28 @@ public static class GameRules
 
     public static Player GetWinner(Player[] players)
     {
-        Player winner = players[0];
+        Player winner = null;
+
         foreach (Player p in players)
         {
-            if (p.Score > winner.Score)
+            // Skip empty slots
+            if (p == null)
+                continue;
+
+            // First valid player becomes winner
+            if (winner == null)
+            {
                 winner = p;
+                continue;
+            }
+
+            // Compare scores
+            if (p.Score > winner.Score)
+            {
+                winner = p;
+            }
         }
+
         return winner;
     }
 

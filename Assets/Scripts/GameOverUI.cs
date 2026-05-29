@@ -37,11 +37,17 @@ public class GameOverUI : MonoBehaviour
         }
 
         // sort players by score (highest first)
-        var sortedPlayers = players
-    .OrderByDescending(p => p.Score)
-    .ThenBy(p => p.LastBookTurn)
-    .Take(activePlayers)
-    .ToArray();
+        var validPlayers =
+    players
+    .Where(p => p != null)
+    .ToList();
+
+        var sortedPlayers =
+            validPlayers
+            .OrderByDescending(p => p.Score)
+            .ThenBy(p => p.LastBookTurn)
+            .Take(activePlayers)
+            .ToArray();
 
         // first hide all rows
         for (int i = 0; i < playerNames.Length; i++)
