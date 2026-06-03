@@ -390,8 +390,16 @@ public class GameManager : MonoBehaviour, ICardOwner
         }
     }
 
-    public void UpdateDeckVisualCount(int remainingCards)
+    public void UpdateDeckVisualCount(
+    int remainingCards,
+    bool force = false
+)
     {
+        if (!force && turnActionRunning)
+        {
+            Debug.Log("[DECK] Ignoring deck sync during animation");
+            return;
+        }
         if (deckPosition == null)
         {
             Debug.LogError("DeckPosition missing");
@@ -1188,7 +1196,7 @@ public class GameManager : MonoBehaviour, ICardOwner
 
         turnActionRunning = false;
 
-        turnActionRunning = false;
+        // turnActionRunning = false;
 
         // ⭐ continue asking only AFTER book logic finishes
         if (!players[toID].IsHuman && !gameOver)
@@ -2329,6 +2337,9 @@ public class GameManager : MonoBehaviour, ICardOwner
 
                     foreach (int value in data.handRefillCards)
                     {
+                        // Remove one visual deck card first
+                        RemoveTopDeckVisual();
+
                         Card refillCard =
                             ConvertToCard(value);
 
@@ -2357,7 +2368,7 @@ public class GameManager : MonoBehaviour, ICardOwner
             askerUI.HideTurnPopupOnly();
             // UpdateDeckVisualCount(data.deckRemaining);
 
-            UpdateDeckVisualCount(data.deckRemaining);
+            UpdateDeckVisualCount(data.deckRemaining, true);
 
             if (data.isGameOver)
             {
@@ -2582,6 +2593,9 @@ public class GameManager : MonoBehaviour, ICardOwner
 
                     foreach (int value in data.handRefillCards)
                     {
+                        // Remove one visual deck card first
+                        RemoveTopDeckVisual();
+
                         Card refillCard =
                             ConvertToCard(value);
 
@@ -2607,7 +2621,7 @@ public class GameManager : MonoBehaviour, ICardOwner
                 }
                 yield return new WaitForSeconds(2f);
             }
-            UpdateDeckVisualCount(data.deckRemaining);
+            UpdateDeckVisualCount(data.deckRemaining, true);
 
             // CONTINUE TURN
             if (data.continueTurn)
