@@ -1796,12 +1796,8 @@ public class GameManager : MonoBehaviour, ICardOwner
     {
         if (players == null || playerIdToClientId.Count == 0)
             return;
-        // Debug.Log("Applying PRIVATE hand");
-        // STEP 1: find MY player id
+
         int myId = GetLocalPlayerId(NetworkManager.Singleton.LocalClientId);
-        //         Debug.Log(
-        //     $"[NET-HAND] Applied {hand.Length} cards → {Dbg(players[myId])}"
-        // );
 
         if (myId == -1)
         {
@@ -1809,18 +1805,17 @@ public class GameManager : MonoBehaviour, ICardOwner
             return;
         }
 
-        // STEP 2: CLEAR OLD CARDS
+        if (turnActionRunning)
+            return;
+
         players[myId].PlayerHand.Clear();
-        // STEP 3: ADD NEW CARDS
+
         foreach (int value in hand)
         {
             players[myId].AddCard(ConvertToCard(value));
         }
-        // STEP 4: refresh UI
-        if (!turnActionRunning)
-            RefreshAllHands();
-        // STEP 5: VERY IMPORTANT (fix stuck turn)
-        // turnActionRunning = false;
+
+        RefreshAllHands();
     }
 
     int GetLocalPlayerId(ulong clientId)
@@ -2254,6 +2249,7 @@ public class GameManager : MonoBehaviour, ICardOwner
                         asker.PlayerID
                     )
                 );
+                players[asker.PlayerID].AddCard(card);
             }
 
             // Refresh synced hands
@@ -2504,7 +2500,7 @@ public class GameManager : MonoBehaviour, ICardOwner
          asker.PlayerID
      )
  );
-
+            players[asker.PlayerID].AddCard(drawn);
             RefreshAllHands();
 
             // Lucky draw popup
@@ -2607,6 +2603,7 @@ public class GameManager : MonoBehaviour, ICardOwner
                                 refillPlayerId
                             )
                         );
+                        players[refillPlayerId].AddCard(refillCard);
                     }
 
                     RefreshAllHands();
