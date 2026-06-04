@@ -2231,6 +2231,41 @@ public class GameManager : MonoBehaviour, ICardOwner
             );
 
             yield return new WaitForSeconds(1.5f);
+            // Remove transferred cards from target hand immediately
+            int localPlayerId =
+                GetLocalPlayerId(
+                    NetworkManager.Singleton.LocalClientId
+                );
+
+            if (target.PlayerID == localPlayerId)
+            {
+                // Real cards available
+                players[target.PlayerID]
+                    .RemoveCardsByRank(data.rank);
+            }
+            else
+            {
+                // Remote players only have hidden cards
+                for (int i = 0; i < data.transferCount; i++)
+                {
+                    var targetHand =
+                        players[target.PlayerID]
+                        .PlayerHand
+                        .Cards;
+
+                    if (targetHand.Count > 0)
+                    {
+                        players[target.PlayerID]
+                            .PlayerHand
+                            .RemoveCard(
+                                targetHand[targetHand.Count - 1]
+                            );
+                    }
+                }
+            }
+
+            RefreshAllHands();
+
             Debug.Log(
     $"[NET-TRANSFER] {Dbg(target)} → {Dbg(asker)} | " +
     $"{data.transferCount} cards rank:{data.rank}"

@@ -52,18 +52,55 @@ public class MatchmakingUIController : MonoBehaviour
         // hide matchmaking panel
         panel.SetActive(false);
         // open mode selection panel
-        var menu = FindAnyObjectByType<MenuController>();
+        GameModeManager.isOnlineMode = false;
+
+        // First try LobbyManager
+        LobbyManager lm = LobbyManager.Instance;
+
+        if (lm != null)
+        {
+            if (lm.menuBackground != null)
+                lm.menuBackground.SetActive(false);
+
+            if (lm.modeSelectionPanel != null)
+            {
+                lm.modeSelectionPanel.SetActive(true);
+
+                ModeSelectionController controller =
+                    lm.modeSelectionPanel.GetComponent<ModeSelectionController>();
+
+                if (controller != null)
+                {
+                    controller.SetHeader("Online Mode");
+                }
+            }
+
+            yield break;
+        }
+
+        // Fallback to MenuController
+        MenuController menu =
+            FindAnyObjectByType<MenuController>();
 
         if (menu != null)
         {
-            menu.MenuUI.SetActive(false);
-            menu.LoadingPanel.SetActive(false);
-            menu.ModeSelectionPanel.SetActive(true);
-            //set header text online
-            var controller = menu.ModeSelectionPanel.GetComponent<ModeSelectionController>();
-            if (controller != null)
+            if (menu.MenuUI != null)
+                menu.MenuUI.SetActive(false);
+
+            if (menu.LoadingPanel != null)
+                menu.LoadingPanel.SetActive(false);
+
+            if (menu.ModeSelectionPanel != null)
             {
-                controller.SetHeader("Online Mode");
+                menu.ModeSelectionPanel.SetActive(true);
+
+                ModeSelectionController controller =
+                    menu.ModeSelectionPanel.GetComponent<ModeSelectionController>();
+
+                if (controller != null)
+                {
+                    controller.SetHeader("Online Mode");
+                }
             }
         }
     }
@@ -85,11 +122,14 @@ public class MatchmakingUIController : MonoBehaviour
         var menu = FindAnyObjectByType<MenuController>();
         if (menu != null)
         {
-            menu.MenuUI.SetActive(true);
+            if (menu.MenuUI != null)
+            {
+                menu.MenuUI.SetActive(true);
+            }
         }
         // hide matchmaking UI
         panel.SetActive(false);
     }
 
-    
+
 }
