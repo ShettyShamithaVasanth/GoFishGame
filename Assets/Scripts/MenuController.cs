@@ -11,6 +11,7 @@ public class MenuController : MonoBehaviour
     public GameObject MenuUI;
     public GameObject LoadingPanel;
     public GameObject ModeSelectionPanel;
+    public GameObject MenuBackground;
     public GameObject GameManager; // your gameplay system
     public UIPlayer[] uiPlayers;
     public GameSceneUI gameSceneUI;
@@ -26,7 +27,10 @@ public class MenuController : MonoBehaviour
     void Start()
     {
         ModeSelectionPanel.SetActive(false); // ⭐ hide initially
-
+        if (MenuBackground != null)
+        {
+            MenuBackground.SetActive(true);
+        }
         if (GameOverUI.skipMenuOnReload)
         {
             GameOverUI.skipMenuOnReload = false;
@@ -42,6 +46,8 @@ public class MenuController : MonoBehaviour
             }
         }
     }
+
+
     public void PlayOffline()
     {
         MenuUI.SetActive(false);
@@ -55,7 +61,8 @@ public class MenuController : MonoBehaviour
         yield return new WaitForSeconds(3f);
 
         LoadingPanel.SetActive(false);
-
+        if (MenuBackground != null)
+            MenuBackground.SetActive(false);
         // ⭐ show ModeSelectionPanel instead of starting game
         ModeSelectionPanel.SetActive(true);
 
@@ -91,8 +98,15 @@ public class MenuController : MonoBehaviour
     }
     public void ContinueGame()
     {
-        ModeSelectionPanel.SetActive(false);
+        if (MenuUI != null)
+            MenuUI.SetActive(false);
 
+        if (LoadingPanel != null)
+            LoadingPanel.SetActive(false);
+        if (MenuBackground != null)
+            MenuBackground.SetActive(false);
+
+        ModeSelectionPanel.SetActive(false);
         int players = ModeSelectionController.selectedPlayers;
 
         // Hide all first
@@ -128,7 +142,7 @@ public class MenuController : MonoBehaviour
         DeckPosition.SetActive(true);
 
         GameManager.SetActive(true);
-        GameManager.GetComponent<GameManager>().SetupGame();    
+        GameManager.GetComponent<GameManager>().SetupGame();
 
         // foreach (UIPlayer p in uiPlayers)
         // {

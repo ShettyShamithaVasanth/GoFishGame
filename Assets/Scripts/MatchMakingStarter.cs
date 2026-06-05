@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.Rendering;
+using TMPro;
 
 public class MatchmakingStarter : MonoBehaviour
 {
@@ -46,6 +48,14 @@ public class MatchmakingStarter : MonoBehaviour
         {
             myProfileUI.SetProfile(playerName, avatar);
         }
-        GameModeManager.isOnlineMode = false;
+        if (QuickMatchService.Instance != null)
+        {
+            QuickMatchService.Instance.FindMatch();
+        }
+        else
+        {
+            Debug.LogError("QuickMatchService Instance missing");
+        }
+        // GameModeManager.isOnlineMode = false;
     }
 }

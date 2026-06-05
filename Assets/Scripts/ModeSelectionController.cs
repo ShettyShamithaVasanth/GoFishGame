@@ -69,16 +69,19 @@ public class ModeSelectionController : MonoBehaviour
 
     public void PlayGame()
     {
-        Debug.Log("Play clicked. Starting game.");
+        gameObject.SetActive(false);
 
-        gameObject.SetActive(false); // hide mode panel
+        MenuController menu =
+            FindAnyObjectByType<MenuController>();
 
-        GameManager.SetActive(true);
-
-        // foreach (UIPlayer p in uiPlayers)
-        //     p.canInteract = true;
-
-        gameSceneUI.ShowPanel();
-        Debug.Log("Game started. UI Players can now interact.");
+        if (menu != null)
+        {
+            menu.ContinueGame();
+        }
+        else
+        {
+            Debug.LogError(
+                "MenuController missing - cannot start game");
+        }
     }
 }

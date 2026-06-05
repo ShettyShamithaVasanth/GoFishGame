@@ -5674,6 +5674,54 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -400}
   m_SizeDelta: {x: -40.000004, y: 180}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &423357026
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 423357028}
+  - component: {fileID: 423357027}
+  m_Layer: 0
+  m_Name: QuickMatchService
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &423357027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 423357026}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e852fc1f1c189e04786f02528376e2ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NewMonoBehaviourScript
+  requiredPlayers: 4
+  searchTimeout: 20
+  pollInterval: 2.5
+  avatarDatabase: {fileID: 11400000, guid: b4edf01818d93bb4a881334825dff7d0, type: 2}
+--- !u!4 &423357028
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 423357026}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &424685827
 GameObject:
   m_ObjectHideFlags: 0
@@ -10100,7 +10148,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52112fe135ea56d498d0c32910fc82c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MatchMakingStarter
-  myProfileUI: {fileID: 141296912}
+  myProfileUI: {fileID: 1499575464}
 --- !u!4 &786098983
 Transform:
   m_ObjectHideFlags: 0
@@ -12669,7 +12717,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 987455790}
   m_Direction: 0
   m_Value: 0
-  m_Size: 0.43630952
+  m_Size: 0.4363095
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -17139,6 +17187,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MatchmakingUIController
   panel: {fileID: 2112378998}
+  playerSlots:
+  - {fileID: 1499575464}
+  - {fileID: 1470436952}
+  - {fileID: 1691285165}
+  - {fileID: 1045306037}
+  statusText: {fileID: 1792915179}
   timerText: {fileID: 1053683970}
 --- !u!4 &1255424950
 Transform:
@@ -20567,8 +20621,8 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1242130675}
   - {fileID: 1510684647}
+  - {fileID: 1242130675}
   m_Father: {fileID: 1080748294}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -30070,3 +30124,4 @@ SceneRoots:
   - {fileID: 1615483065}
   - {fileID: 211940220}
   - {fileID: 1466327216}
+  - {fileID: 423357028}
