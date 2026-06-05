@@ -18,26 +18,6 @@ public static class OfflineFallback
             return;
         }
 
-        if (menu.MenuUI != null)
-            menu.MenuUI.SetActive(false);
-
-        if (menu.LoadingPanel != null)
-            menu.LoadingPanel.SetActive(false);
-        if (menu.MenuBackground != null)
-            menu.MenuBackground.SetActive(false);
-
-        if (menu.ModeSelectionPanel != null)
-        {
-            menu.ModeSelectionPanel.SetActive(true);
-
-            ModeSelectionController controller =
-                menu.ModeSelectionPanel
-                    .GetComponent<ModeSelectionController>();
-
-            if (controller != null)
-            {
-                controller.SetHeader("Offline");
-            }
-        }
+        menu.ShowModeSelection("Offline");   
     }
 }

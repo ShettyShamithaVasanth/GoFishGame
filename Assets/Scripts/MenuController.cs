@@ -60,18 +60,7 @@ public class MenuController : MonoBehaviour
     {
         yield return new WaitForSeconds(3f);
 
-        LoadingPanel.SetActive(false);
-        if (MenuBackground != null)
-            MenuBackground.SetActive(false);
-        // ⭐ show ModeSelectionPanel instead of starting game
-        ModeSelectionPanel.SetActive(true);
-
-        // ⭐ change header text
-        ModeSelectionController controller =
-            ModeSelectionPanel.GetComponent<ModeSelectionController>();
-
-        if (controller != null)
-            controller.SetHeader(mode);
+        ShowModeSelection(mode);
     }
 
     // ⭐ not implemented modes
@@ -95,6 +84,31 @@ public class MenuController : MonoBehaviour
     {
         FriendsPanel.SetActive(false);
         MenuUI.SetActive(true);
+    }
+
+    public void ShowModeSelection(string mode)
+    {
+        if (MenuUI != null)
+            MenuUI.SetActive(false);
+
+        if (LoadingPanel != null)
+            LoadingPanel.SetActive(false);
+
+        if (MenuBackground != null)
+            MenuBackground.SetActive(false);
+
+        if (ModeSelectionPanel != null)
+        {
+            ModeSelectionPanel.SetActive(true);
+
+            ModeSelectionController controller =
+                ModeSelectionPanel.GetComponent<ModeSelectionController>();
+
+            if (controller != null)
+            {
+                controller.SetHeader(mode);
+            }
+        }
     }
     public void ContinueGame()
     {
