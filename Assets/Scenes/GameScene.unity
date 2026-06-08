@@ -8231,6 +8231,7 @@ MonoBehaviour:
   DeckPosition: {fileID: 705330598}
   FriendsPanel: {fileID: 1818487124}
   roomCodeInput: {fileID: 1139012021}
+  menuAnimationController: {fileID: 1473132317}
 --- !u!114 &656783934
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20416,6 +20417,7 @@ GameObject:
   - component: {fileID: 1473132315}
   - component: {fileID: 1473132314}
   - component: {fileID: 1473132316}
+  - component: {fileID: 1473132317}
   m_Layer: 5
   m_Name: MenuBackground
   m_TagString: Untagged
@@ -20512,6 +20514,30 @@ MonoBehaviour:
   DeckPosition: {fileID: 0}
   FriendsPanel: {fileID: 0}
   roomCodeInput: {fileID: 0}
+  menuAnimationController: {fileID: 0}
+--- !u!114 &1473132317
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1473132312}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28230aef4cc7ce04baa5eb37d74793ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MenuAnimationController
+  wingLeft: {fileID: 499533135}
+  wingRight: {fileID: 2110430890}
+  card1: {fileID: 633920320}
+  card2: {fileID: 1658602610}
+  fish1: {fileID: 1711719498}
+  fish2: {fileID: 806124000}
+  fish3: {fileID: 175892924}
+  fish4: {fileID: 1431720103}
+  friendsFish: {fileID: 1766962618}
+  luckyDrawIcon: {fileID: 931375758}
+  freeCoinIcon: {fileID: 2137955237}
 --- !u!1 &1491476514
 GameObject:
   m_ObjectHideFlags: 0

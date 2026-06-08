@@ -16,6 +16,7 @@ public class Player
     // private int publicCardCount = 0;
 
     public bool IsMyTurn { get; private set; }
+    public object Data { get; internal set; }
 
     public Player(int id, string name, bool isHuman, int avatarIndex = 0)
     {

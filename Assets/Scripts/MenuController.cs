@@ -23,6 +23,7 @@ public class MenuController : MonoBehaviour
     public GameObject DeckPosition;
     public GameObject FriendsPanel;
     public TMP_InputField roomCodeInput;
+    [SerializeField]private MenuAnimationController menuAnimationController;
 
     void Start()
     {
@@ -31,6 +32,10 @@ public class MenuController : MonoBehaviour
         {
             MenuBackground.SetActive(true);
         }
+        if (menuAnimationController != null)
+{
+    menuAnimationController.StartAnimations();
+}
         if (GameOverUI.skipMenuOnReload)
         {
             GameOverUI.skipMenuOnReload = false;
@@ -50,6 +55,7 @@ public class MenuController : MonoBehaviour
 
     public void PlayOffline()
     {
+        menuAnimationController?.StopAnimations();
         MenuUI.SetActive(false);
         LoadingPanel.SetActive(true);
 
@@ -66,6 +72,7 @@ public class MenuController : MonoBehaviour
     // ⭐ not implemented modes
     public void PlayOnline()
     {
+        menuAnimationController?.StopAnimations();
         Debug.Log("play Online mode.");
         // set mode
         GameModeManager.isOnlineMode = true;
@@ -75,6 +82,7 @@ public class MenuController : MonoBehaviour
 
     public void PlayWithFriends()
     {
+        menuAnimationController?.StopAnimations();
         Debug.Log("Play with Friends clicked.");
         MenuUI.SetActive(false);
         FriendsPanel.SetActive(true);
@@ -84,6 +92,7 @@ public class MenuController : MonoBehaviour
     {
         FriendsPanel.SetActive(false);
         MenuUI.SetActive(true);
+        menuAnimationController?.StartAnimations();
     }
 
     public void ShowModeSelection(string mode)
