@@ -19,7 +19,8 @@ public class ModeSelectionController : MonoBehaviour
     public GameObject GameManager;
     public GameSceneUI gameSceneUI;
     public UIPlayer[] uiPlayers;
-
+    public GameObject menuBackground;
+    public GameObject menuUI;
     public static int selectedPlayers = 4;
     void Start()
     {
@@ -82,6 +83,24 @@ public class ModeSelectionController : MonoBehaviour
         {
             Debug.LogError(
                 "MenuController missing - cannot start game");
+        }
+    }
+
+    public void ClosePanel()
+    {
+        selectedPlayers = 4;
+
+        UpdateButtons(btn4);
+        gameObject.SetActive(false);
+
+        if (menuBackground != null)
+        {
+            menuBackground.SetActive(true);
+        }
+
+        if (menuUI != null)
+        {
+            menuUI.SetActive(true);
         }
     }
 }

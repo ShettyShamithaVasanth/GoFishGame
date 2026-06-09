@@ -66,13 +66,10 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     string Dbg(Player p)
     {
-        if (p == null) return "[null]";
+        if (p == null)
+            return "[null]";
 
-        string seat = p.SeatId.HasValue
-                ? p.SeatId.Value.ToString() : "-";
-        string net = string.IsNullOrEmpty(p.NetworkId)
-                ? "-" : p.NetworkId;
-        return $"{p.PlayerName}[seat:{seat} net:{net}]";
+        return $"{p.PlayerName}[id:{p.PlayerID}]";
     }
 
     // 🔥 Player names pool (10 names)
@@ -1958,9 +1955,6 @@ public class GameManager : MonoBehaviour, ICardOwner
                 NetworkManager.Singleton.LocalClientId,
                 netPlayer.avatarIndex.Value
             );
-            p.SeatId = seatIndex;
-            p.NetworkId = netPlayer.OwnerClientId.ToString();
-            p.NetworkClientId = netPlayer.OwnerClientId;
             // STORE PLAYER USING SEAT INDEX
             players[seatIndex] = p;
             Debug.Log(

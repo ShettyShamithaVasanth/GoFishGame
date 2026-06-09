@@ -662,15 +662,7 @@ public class LobbyManager : MonoBehaviour
                     avatarDatabase.avatarSprites[avatarIndex];
             }
             // APPLY UI
-            string shortId =
-    player.Id.Substring(
-        0,
-        System.Math.Min(player.Id.Length, 8)
-    );
-
-            string debugName =
-                $"{name} [seat:{i} net:{shortId}]";
-            playerSlots[i].SetProfile(debugName, avatarSprite);
+            playerSlots[i].SetProfile(name, avatarSprite);
             // Debug.Log($"Slot{i} → {name}, AvatarIndex: {avatarIndex},IsLocal: {player.Id == localPlayerId}"
             // );
         }
