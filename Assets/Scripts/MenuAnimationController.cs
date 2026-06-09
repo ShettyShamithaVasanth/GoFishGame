@@ -52,22 +52,36 @@ public class MenuAnimationController : MonoBehaviour
     {
         if (wingLeft != null)
         {
-            wingLeft
-                .DORotate(
-                    new Vector3(0, 0, 12),
-                    0.8f)
-                .SetLoops(-1, LoopType.Yoyo)
-                .SetTarget(this);
+            Sequence seq = DOTween.Sequence();
+
+            seq.Append(
+                wingLeft.DOScale(1.08f, 0.8f));
+
+            seq.Join(
+                wingLeft.DOAnchorPosY(
+                    wingLeft.anchoredPosition.y + 3f,
+                    0.8f));
+
+            seq.SetLoops(-1, LoopType.Yoyo);
+
+            seq.SetTarget(this);
         }
 
         if (wingRight != null)
         {
-            wingRight
-                .DORotate(
-                    new Vector3(0, 0, -12),
-                    0.8f)
-                .SetLoops(-1, LoopType.Yoyo)
-                .SetTarget(this);
+            Sequence seq = DOTween.Sequence();
+
+            seq.Append(
+                wingRight.DOScale(1.08f, 0.8f));
+
+            seq.Join(
+                wingRight.DOAnchorPosY(
+                    wingRight.anchoredPosition.y + 3f,
+                    0.8f));
+
+            seq.SetLoops(-1, LoopType.Yoyo);
+
+            seq.SetTarget(this);
         }
 
         AnimateCard(card1, 0f);
@@ -177,21 +191,31 @@ public class MenuAnimationController : MonoBehaviour
         if (luckyDrawIcon == null)
             return;
 
-        luckyDrawIcon
-            .DOScale(
-                1.15f,
-                0.7f)
-            .SetLoops(-1, LoopType.Yoyo)
-            .SetTarget(this);
+        Sequence seq = DOTween.Sequence();
 
-        luckyDrawIcon
-            .DORotate(
-                new Vector3(0, 0, 360),
-                6f,
-                RotateMode.FastBeyond360)
-            .SetLoops(-1)
-            .SetEase(Ease.Linear)
-            .SetTarget(this);
+        seq.Append(
+            luckyDrawIcon.DOScale(
+                1.15f,
+                0.35f));
+
+        seq.Join(
+            luckyDrawIcon.DOAnchorPosY(
+                luckyDrawIcon.anchoredPosition.y + 5f,
+                0.35f));
+
+        seq.Append(
+            luckyDrawIcon.DOScale(
+                1f,
+                0.35f));
+
+        seq.Join(
+            luckyDrawIcon.DOAnchorPosY(
+                luckyDrawIcon.anchoredPosition.y,
+                0.35f));
+
+        seq.SetLoops(-1);
+
+        seq.SetTarget(this);
     }
 
     private void AnimateFreeCoins()

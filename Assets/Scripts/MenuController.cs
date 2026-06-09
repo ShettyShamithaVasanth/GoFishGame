@@ -23,7 +23,7 @@ public class MenuController : MonoBehaviour
     public GameObject DeckPosition;
     public GameObject FriendsPanel;
     public TMP_InputField roomCodeInput;
-    [SerializeField]private MenuAnimationController menuAnimationController;
+    [SerializeField] private MenuAnimationController menuAnimationController;
 
     void Start()
     {
@@ -33,9 +33,9 @@ public class MenuController : MonoBehaviour
             MenuBackground.SetActive(true);
         }
         if (menuAnimationController != null)
-{
-    menuAnimationController.StartAnimations();
-}
+        {
+            menuAnimationController.StartAnimations();
+        }
         if (GameOverUI.skipMenuOnReload)
         {
             GameOverUI.skipMenuOnReload = false;

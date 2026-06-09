@@ -2501,7 +2501,7 @@ public class GameManager : MonoBehaviour, ICardOwner
                 if (players[asker.PlayerID].IsHuman)
                 {
                     toastUI.ShowToast(
-                        "Go Fish! Click the deck or Fish icon"
+                        "Go Fish! Click the deck to draw a card"
                     );
                 }
             }
