@@ -1,12 +1,12 @@
 # ninja log v5
-55	245	8026898881322135	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	cac98a6c4608ff3
-247	379	8026898882546649	D:/UnityProjects/GoFishGit/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/4fw45491/obj/arm64-v8a/libswappywrapper.so	edf1716638c92ae7
-32	1251	8026898891327588	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	37c4e58c99a3cb95
-19	1258	8026898891362842	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	56564c3283040389
-47	1270	8026898891549633	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	fcf0a64d6356823b
-7	1277	8026898891615155	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	b1370a374cfd540e
-13	1314	8026898891979048	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	53d02f0046a861b0
-40	1376	8026898892594106	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	e21400d1be7879e
-25	1514	8026898893990068	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	3848fa14dcec294
-1	1609	8026898894880546	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	d6b0e0094d5d8492
-1609	1707	8026898895912964	D:/UnityProjects/GoFishGit/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/4fw45491/obj/arm64-v8a/libgame.so	d9fc046c3cb7d9da
+77	531	8027923068416509	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	cac98a6c4608ff3
+533	853	8027923071100691	D:/UnityProjects/GoFishGit/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/4fw45491/obj/arm64-v8a/libswappywrapper.so	edf1716638c92ae7
+44	1802	8027923081109602	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	56564c3283040389
+10	2005	8027923083154814	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	53d02f0046a861b0
+36	2111	8027923084135053	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	37c4e58c99a3cb95
+2	2147	8027923084570452	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	b1370a374cfd540e
+65	2173	8027923084868014	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	e21400d1be7879e
+55	2252	8027923085663336	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	fcf0a64d6356823b
+27	2331	8027923086435828	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	3848fa14dcec294
+18	2711	8027923090186037	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	d6b0e0094d5d8492
+2712	2821	8027923091377662	D:/UnityProjects/GoFishGit/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/4fw45491/obj/arm64-v8a/libgame.so	d9fc046c3cb7d9da
