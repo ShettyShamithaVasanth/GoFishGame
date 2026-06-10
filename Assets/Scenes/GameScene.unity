@@ -1495,7 +1495,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProfileUI
   avatarImage: {fileID: 805956526}
   nameText: {fileID: 1965855609}
-  debugText: {fileID: 0}
 --- !u!1 &130037047
 GameObject:
   m_ObjectHideFlags: 0
@@ -2046,7 +2045,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProfileUI
   avatarImage: {fileID: 1047908728}
   nameText: {fileID: 1592787392}
-  debugText: {fileID: 0}
 --- !u!1 &148811820
 GameObject:
   m_ObjectHideFlags: 0
@@ -9994,22 +9992,18 @@ MonoBehaviour:
   - PlayerName: 
     IsHuman: 0
     AvatarIndex: 0
-    NetworkId: 
     LastBookTurn: 0
   - PlayerName: 
     IsHuman: 0
     AvatarIndex: 0
-    NetworkId: 
     LastBookTurn: 0
   - PlayerName: 
     IsHuman: 0
     AvatarIndex: 0
-    NetworkId: 
     LastBookTurn: 0
   - PlayerName: 
     IsHuman: 0
     AvatarIndex: 0
-    NetworkId: 
     LastBookTurn: 0
   gameOverUI: {fileID: 522639970}
   toastUI: {fileID: 1262208108}
@@ -12056,7 +12050,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProfileUI
   avatarImage: {fileID: 1255830684}
   nameText: {fileID: 1543304123}
-  debugText: {fileID: 0}
 --- !u!1 &910249171
 GameObject:
   m_ObjectHideFlags: 0
@@ -14091,7 +14084,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProfileUI
   avatarImage: {fileID: 1065833106}
   nameText: {fileID: 938034510}
-  debugText: {fileID: 0}
 --- !u!1 &1047908726
 GameObject:
   m_ObjectHideFlags: 0
@@ -20448,7 +20440,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProfileUI
   avatarImage: {fileID: 1740794871}
   nameText: {fileID: 426777691}
-  debugText: {fileID: 0}
 --- !u!1 &1471929948
 GameObject:
   m_ObjectHideFlags: 0
@@ -20886,7 +20877,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProfileUI
   avatarImage: {fileID: 1510684648}
   nameText: {fileID: 1242130676}
-  debugText: {fileID: 0}
 --- !u!1 &1509964940
 GameObject:
   m_ObjectHideFlags: 0
@@ -24105,7 +24095,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProfileUI
   avatarImage: {fileID: 1918700456}
   nameText: {fileID: 1390017817}
-  debugText: {fileID: 0}
 --- !u!1 &1692304261
 GameObject:
   m_ObjectHideFlags: 0
@@ -24737,7 +24726,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerProfileUI
   avatarImage: {fileID: 2135506122}
   nameText: {fileID: 1125416490}
-  debugText: {fileID: 0}
 --- !u!1 &1726997968
 GameObject:
   m_ObjectHideFlags: 0

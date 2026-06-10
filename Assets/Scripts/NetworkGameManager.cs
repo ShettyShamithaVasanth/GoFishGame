@@ -565,7 +565,7 @@ public class NetworkGameManager : NetworkBehaviour
 
             TurnResultClientRpc(result);
 
-            StartCoroutine(DelayedStateSync(5f));
+            StartCoroutine(DelayedStateSync(18f));
 
             return;
         }
@@ -574,7 +574,7 @@ public class NetworkGameManager : NetworkBehaviour
 
         TurnResultClientRpc(result);
 
-        StartCoroutine(DelayedStateSync(5f));
+        StartCoroutine(DelayedStateSync(18f));
     }
 
     [Rpc(SendTo.Server)]
@@ -700,7 +700,7 @@ public class NetworkGameManager : NetworkBehaviour
 
         TurnResultClientRpc(result);
 
-        StartCoroutine(DelayedStateSync(2.5f));
+        StartCoroutine(DelayedStateSync(18f));
     }
 
     [ClientRpc]

@@ -2321,6 +2321,22 @@ public class GameManager : MonoBehaviour, ICardOwner
                             .RemoveCard(c);
                     }
                 }
+                else
+                {
+                    var remoteHand =
+                        players[bookLocalId]
+                        .PlayerHand
+                        .Cards;
+
+                    for (int i = 0; i < 4 && remoteHand.Count > 0; i++)
+                    {
+                        players[bookLocalId]
+                            .PlayerHand
+                            .RemoveCard(
+                                remoteHand[remoteHand.Count - 1]
+                            );
+                    }
+                }
 
                 players[bookLocalId]
                     .SetScore(data.bookPlayerScore);
@@ -2362,7 +2378,6 @@ public class GameManager : MonoBehaviour, ICardOwner
 
                     foreach (int value in data.handRefillCards)
                     {
-                        // Remove one visual deck card first
                         RemoveTopDeckVisual();
 
                         Card refillCard =
@@ -2376,6 +2391,8 @@ public class GameManager : MonoBehaviour, ICardOwner
                                 refillPlayerId
                             )
                         );
+
+                        players[refillPlayerId].AddCard(refillCard);
                     }
 
                     RefreshAllHands();
@@ -2575,6 +2592,22 @@ public class GameManager : MonoBehaviour, ICardOwner
                         players[bookLocalId]
                             .PlayerHand
                             .RemoveCard(c);
+                    }
+                }
+                else
+                {
+                    var remoteHand =
+                        players[bookLocalId]
+                        .PlayerHand
+                        .Cards;
+
+                    for (int i = 0; i < 4 && remoteHand.Count > 0; i++)
+                    {
+                        players[bookLocalId]
+                            .PlayerHand
+                            .RemoveCard(
+                                remoteHand[remoteHand.Count - 1]
+                            );
                     }
                 }
 
