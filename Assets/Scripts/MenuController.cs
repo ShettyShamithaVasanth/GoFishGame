@@ -22,6 +22,7 @@ public class MenuController : MonoBehaviour
     public GameObject RightPlayer;
     public GameObject DeckPosition;
     public GameObject FriendsPanel;
+    public GameObject GameRulesPanel;
     public TMP_InputField roomCodeInput;
     [SerializeField] private MenuAnimationController menuAnimationController;
 
@@ -187,6 +188,15 @@ public class MenuController : MonoBehaviour
             return;
         }
         LobbyManager.Instance.JoinLobby(code);
+    }
+
+    public void OpenGameRules()
+    {
+        GameRulesPanel.SetActive(true);
+    }
+    public void CloseGameRules()
+    {
+        GameRulesPanel.SetActive(false);
     }
 
 

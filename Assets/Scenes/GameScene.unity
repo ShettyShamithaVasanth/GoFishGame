@@ -8549,6 +8549,7 @@ MonoBehaviour:
   RightPlayer: {fileID: 822254663}
   DeckPosition: {fileID: 705330598}
   FriendsPanel: {fileID: 1818487124}
+  GameRulesPanel: {fileID: 17334589}
   roomCodeInput: {fileID: 1139012021}
   menuAnimationController: {fileID: 1473132317}
 --- !u!114 &656783934
@@ -12668,8 +12669,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -122.5}
-  m_SizeDelta: {x: -192, y: -885}
+  m_AnchoredPosition: {x: 0, y: -75}
+  m_SizeDelta: {x: -192, y: -720}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &918399055
 MonoBehaviour:
@@ -14357,8 +14358,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 680, y: 1100}
+  m_AnchoredPosition: {x: 0, y: -5.3585}
+  m_SizeDelta: {x: 717.5085, y: 1358.155}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1024767482
 MonoBehaviour:
@@ -14380,27 +14381,34 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: '1. Ask only for a rank that you already have.
+  m_text: 'Objective
 
-    
+    Collect the most Books (4 cards of the same rank) to win
+    the game.
 
-    2. If the opponent
-    has that rank, they must give all cards of that rank.
 
-    
+    Deck
 
-    3. If they
-    don''t have it, they say Go Fish and you draw a card.
+    The game uses a standard 52-card deck dealt equally
+    among players.
 
-    
 
-    4. Collect
-    all 4 cards of the same rank to form a Book.
+    Rules
 
-    
+    1. Ask another player for a card rank that you
+    already have in your hand.
 
-    5. The player with
-    the most Books wins the game.'
+    2. If they have that rank, they must give you
+    all cards of that rank.
+
+    3. If they do not have it, they say "Go Fish!" and
+    you draw one card from the deck.
+
+    4. Collect all 4 cards of the same rank
+    to form a Book and place it aside.
+
+    5. When all Books are formed, the player
+    with the most Books wins.'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 061d4ceb3dd5dc74f91c264ddc10b55f, type: 2}
   m_sharedMaterial: {fileID: 4589053775106469827, guid: 061d4ceb3dd5dc74f91c264ddc10b55f, type: 2}
@@ -14427,8 +14435,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 45
-  m_fontSizeBase: 45
+  m_fontSize: 40
+  m_fontSizeBase: 40
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -15914,7 +15922,7 @@ GameObject:
   - component: {fileID: 1116693308}
   - component: {fileID: 1116693307}
   m_Layer: 5
-  m_Name: Lobby
+  m_Name: Title
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -19456,9 +19464,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 211940219}
-        m_TargetAssemblyTypeName: LobbyManager, Assembly-CSharp
-        m_MethodName: CloseLobby
+      - m_Target: {fileID: 1473132316}
+        m_TargetAssemblyTypeName: MenuController, Assembly-CSharp
+        m_MethodName: CloseGameRules
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -21626,6 +21634,7 @@ MonoBehaviour:
   RightPlayer: {fileID: 0}
   DeckPosition: {fileID: 0}
   FriendsPanel: {fileID: 0}
+  GameRulesPanel: {fileID: 17334589}
   roomCodeInput: {fileID: 0}
   menuAnimationController: {fileID: 0}
 --- !u!114 &1473132317
@@ -25489,7 +25498,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1710658543}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1473132316}
+        m_TargetAssemblyTypeName: MenuController, Assembly-CSharp
+        m_MethodName: OpenGameRules
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1710658543
 MonoBehaviour:
   m_ObjectHideFlags: 0
