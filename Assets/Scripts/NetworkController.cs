@@ -59,11 +59,6 @@ public class NetworkController : MonoBehaviour
         nextTurnButton.gameObject.SetActive(false);
         // askButton.gameObject.SetActive(false);
     }
-    // public void StartServer()
-    // {
-    //     NetworkManager.Singleton.StartServer();
-    //     Debug.Log("Server Started");
-    // }
 
     void OnApplicationQuit()
     {

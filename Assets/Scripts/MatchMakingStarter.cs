@@ -56,6 +56,5 @@ public class MatchmakingStarter : MonoBehaviour
         {
             Debug.LogError("QuickMatchService Instance missing");
         }
-        // GameModeManager.isOnlineMode = false;
     }
 }

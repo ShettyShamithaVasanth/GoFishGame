@@ -35,8 +35,6 @@ public class PlayFabProfileManager : MonoBehaviour
             error => Debug.LogError("Cloud Save FAILED"));
     }
 
-    //LOAD PROFILE FROM CLOUD
-    // [System.Obsolete]
     public void LoadProfile()
     {
         if (!PlayFabClientAPI.IsClientLoggedIn())

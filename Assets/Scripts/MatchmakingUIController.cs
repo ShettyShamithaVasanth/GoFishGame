@@ -56,23 +56,6 @@ public class MatchmakingUIController : MonoBehaviour
         panel.SetActive(true);
     }
 
-    // [System.Obsolete]
-    // IEnumerator SearchTimer()
-    // {
-    //     while (timer > 0 && searching)
-    //     {
-    //         timer -= Time.deltaTime;
-    //         timerText.text = "TIMER : " + Mathf.Ceil(timer) + "s";
-    //         yield return null;
-    //     }
-
-    //     if (timer <= 0)
-    //     {
-    //         searching = false;
-    //     }
-    // }
-
-    // [System.Obsolete]
     IEnumerator HandleNoPlayersFound()
     {
         timerText.text =

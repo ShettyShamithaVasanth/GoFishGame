@@ -96,46 +96,11 @@ public class QuickMatchService : MonoBehaviour
     {
         Debug.Log("Starting Host Flow");
 
-        //
-        // Create Relay
-        //
-
-        //
-        // Get Relay Code
-        //
-
-        //
-        // Store Relay Code In Lobby
-        //
-
-        //
-        // StartHost()
-        //
-
-        //
-        // InitializeAndDeal()
-        //
         return Task.CompletedTask;
     }
     private Task StartClientFlow()
     {
         Debug.Log("Starting Client Flow");
-
-        //
-        // Get Relay Code From Lobby
-        //
-
-        //
-        // Join Relay
-        //
-
-        //
-        // StartClient()
-        //
-
-        //
-        // Wait For Host To InitializeAndDeal()
-        //
         return Task.CompletedTask;
     }
     private System.Collections.IEnumerator LeaveLobbyAndCleanup()
@@ -149,8 +114,6 @@ public class QuickMatchService : MonoBehaviour
         isHost = false;
 
         searchTimer = 0f;
-
-        // pollTimer = 0f;
 
         yield return null;
     }

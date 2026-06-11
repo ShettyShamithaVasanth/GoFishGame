@@ -86,13 +86,4 @@ public class Player
     {
         Score++;
     }
-
-    // public void SetPublicCardCount(int count)
-    // {
-    //     publicCardCount = count;
-    // }
-    // public int GetPublicCardCount()
-    // {
-    //     return publicCardCount;
-    // }
 }

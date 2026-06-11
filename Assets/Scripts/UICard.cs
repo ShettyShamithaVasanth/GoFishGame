@@ -129,9 +129,5 @@ public class UICard : MonoBehaviour
             }
         }
     }
-    // private void Start()
-    // {
-    //     SetCard(13,cardData.GetSuitSprite(CardSuit.Heart), cardData.SuitColors[(int)CardSuit.Heart]);
-    //     ShowFront(true);
-    // }
+
 }
