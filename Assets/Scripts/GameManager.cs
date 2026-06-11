@@ -541,6 +541,25 @@ public class GameManager : MonoBehaviour, ICardOwner
             completedRanks
         );
     }
+
+    private bool IsRankFullyAskedThisTurn(int rank)
+    {
+        if (activePlayers == null)
+            return false;
+
+        foreach (int targetId in activePlayers)
+        {
+            if (targetId == currentPlayer)
+                continue;
+
+            string key = targetId + "_" + rank;
+
+            if (!askedRankTargetThisTurn.Contains(key))
+                return false;
+        }
+
+        return true;
+    }
     public Player GetCurrentPlayer()
     {
         return players[currentPlayer];
@@ -809,6 +828,8 @@ public class GameManager : MonoBehaviour, ICardOwner
         if (AIStrategy.AlreadyAskedThisTurn(askedRankTargetThisTurn, targetID, selectedRank))
         {
             Debug.Log("You already asked this player for this rank this turn.");
+            toastUI.ShowToastWithAutoHide("You have already asked this card in this turn!",
+            2.5f);
             return;
         }
 
@@ -900,14 +921,19 @@ public class GameManager : MonoBehaviour, ICardOwner
 
     public void SetSelectedRank(int rank)
     {
+        if (IsRankFullyAskedThisTurn(rank))
+        {
+            toastUI.ShowToastWithAutoHide(
+                "You have already asked this card in this turn!",
+                2.5f
+            );
+            return;
+        }
+
         selectedRank = rank;
         waitingForTarget = true;
         toastUI.HideToast();
         toastUI.ShowToast("Now select a player");
-
-        // Debug.Log("Selected Rank: " + rank);
-        // Debug.Log("Now select a target player");
-
     }
 
     void RefreshAllHands()
