@@ -73,7 +73,7 @@ public class MatchmakingUIController : MonoBehaviour
     IEnumerator HandleNoPlayersFound()
     {
         timerText.text =
-            "No players found. Switching to offline...";
+            "All players not found. Switching to offline...";
 
         yield return new WaitForSeconds(1.5f);
 

@@ -1,94 +1,70 @@
-# Plan: Fix Play Online (Quick Match) — 3 Compile Errors + Make It Actually Work
+# Plan: Fix Play Online Crash (NRE) + Finish the Host/Relay Flow
 
-## Status
-The source files were **never edited** — they still contain the original errors. This plan is the single, complete, executable fix. It resolves the 3 blocking errors and corrects the runtime flow so Play Online (Quick Match) works as a proper 4-player Go Fish game, with **no hardcoding**, **correct MVC**, and **Offline + Friends untouched**.
+## Note
+This model cannot read images, so the screenshot wasn't viewable — but the stack trace pinpoints the bug exactly.
 
----
-
-## The 3 Compile Errors (all in `MatchmakingUIController.cs`)
-All three come from `RenderSlots()` referencing things the service doesn't expose:
-
-| # | Location | Cause |
-|---|----------|-------|
-| 1 | UI `:117` `QuickMatchService.Instance.GetLobbyPlayers()` | Method does not exist |
-| 2 | UI `:145` `QuickMatchService.Instance.AvatarDatabase.avatarSprites.Length` | `AvatarDatabase` property typed `object` (QuickMatchService `:231`), no `.avatarSprites` |
-| 3 | UI `:150` `QuickMatchService.Instance.AvatarDatabase.avatarSprites[i]` | same |
-
-**Root cause:** `QuickMatchService.cs:231` has a bogus property that shadows the real serialized field:
-```csharp
-public object AvatarDatabase { get; internal set; }   // DELETE THIS
-```
+## Status of the code
+The previous plan was **partially applied**:
+- ✅ `LobbyPlayerInfo` DTO + `GetLobbyPlayers()` added.
+- ✅ Typed `AvatarDatabase` accessor + Awake fallback.
+- ✅ `OnLobbyUpdated` event + fired in `RefreshLobby`.
+- ❌ **Host create path still broken** — bare `CreateLobbyAsync` (no `mode` data, no `CreateRelay`, no `StartHost`).
+- ❌ **No lobby heartbeat** added.
+- ❌ **No `lobby.Data` null-check** → this is the crash.
 
 ---
 
-## Fix — `Assets/Scripts/QuickMatchService.cs` (Service / Model layer)
-
-### 1) Delete the bogus property (fixes errors 2 & 3)
-Remove `public object AvatarDatabase { get; internal set; }` (line 231).
-Add a proper typed accessor:
-```csharp
-public AvatarDatabase AvatarDatabase => avatarDatabase;
+## THE CRASH (current error)
 ```
-
-### 2) No-hardcode avatar wiring (defensive, no inspector dependency)
-In `Awake()`, reuse the existing `AvatarDatabase` asset already on `LobbyManager` if not assigned:
-```csharp
-private void Awake()
-{
-    Instance = this;
-    if (avatarDatabase == null)
-        avatarDatabase = FindAnyObjectByType<LobbyManager>()?.avatarDatabase;
-}
+NullReferenceException at QuickMatchService.FindOrCreateLobby() line 97
 ```
-
-### 3) Add DTO + `GetLobbyPlayers()` (fixes error 1; keeps Lobby API out of the View)
+Line 97 is:
 ```csharp
-public struct LobbyPlayerInfo
+if (!lobby.Data.ContainsKey(LOBBY_MODE_KEY))   // lobby.Data is NULL
+```
+`QueryLobbiesAsync` returns ALL public lobbies. A lobby created with **no data dictionary** has `lobby.Data == null`, so `.ContainsKey(...)` throws. Since Quick Match lists every public lobby (it doesn't filter server-side), any data-less lobby (including stray/Friends/public lobbies) crashes the loop the moment it appears.
+
+## Fix 1 — Null-safe search loop (`FindOrCreateLobby`)
+Guard both the result list and each lobby's data dictionary:
+```csharp
+if (result == null || result.Results == null)   // nothing to search → go create
 {
-    public string PlayerName;
-    public int AvatarIndex;
-    public bool IsLocal;
+    // fall through to create branch
 }
-
-public List<LobbyPlayerInfo> GetLobbyPlayers()
+else
 {
-    var list = new List<LobbyPlayerInfo>();
-    if (currentLobby == null) return list;
-
-    string localId = Unity.Services.Authentication.AuthenticationService.Instance.PlayerId;
-
-    foreach (var p in currentLobby.Players)
+    foreach (Lobby lobby in result.Results)
     {
-        bool isLocal = (p.Id == localId);
-        string name = isLocal
-            ? (string.IsNullOrEmpty(ProfileData.PlayerName) ? "Player" : ProfileData.PlayerName)
-            : (p.Data != null && p.Data.ContainsKey("name") ? p.Data["name"].Value : "Player");
-        int avatarIndex = isLocal
-            ? ProfileData.PlayerAvatarIndex
-            : (p.Data != null && p.Data.ContainsKey("avatar") && int.TryParse(p.Data["avatar"].Value, out var av) ? av : 0);
-        list.Add(new LobbyPlayerInfo { PlayerName = name, AvatarIndex = avatarIndex, IsLocal = isLocal });
+        if (lobby == null) continue;
+        if (lobby.Data == null || !lobby.Data.ContainsKey(LOBBY_MODE_KEY)) continue;  // <-- THE FIX
+        if (lobby.Data[LOBBY_MODE_KEY].Value != QUICKMATCH_MODE) continue;
+        if (lobby.AvailableSlots <= 0) continue;
+        foundLobby = lobby;
+        break;
     }
-    // Local player first (matches slot-0 = YOU convention)
-    list.Sort((a, b) => a.IsLocal == b.IsLocal ? 0 : (a.IsLocal ? -1 : 1));
-    return list;
 }
 ```
+This alone removes the NRE. But Play Online still won't connect until Fix 2 + 3.
 
-### 4) Fix host create path (runtime: lobby discoverable + relay + host running)
-In `FindOrCreateLobby()`, the `else` branch currently uses a bare `CreateLobbyAsync` with no `mode` data and never creates a relay/host. Replace the create branch body with:
+## Fix 2 — Host create path (make the lobby discoverable + relay-ready)
+The current `else` branch is broken:
 ```csharp
-await CreateQuickMatchLobby();   // public lobby + mode=quickmatch data
-isHost = true;
-await CreateRelay();             // allocation, relayCode stored in lobby, StartHost()
+currentLobby = await LobbyService.Instance.CreateLobbyAsync("QuickMatch", requiredPlayers); // no mode data, no relay, no host
 ```
-Keep the shared `UpdatePlayerAsync` (name+avatar) after the branch; keep the join branch (`JoinLobbyByIdAsync`, `isHost = false`) unchanged.
+Replace the **create branch body only** with:
+```csharp
+await CreateQuickMatchLobby();   // public lobby with mode=quickmatch data (already exists)
+isHost = true;
+await CreateRelay();             // allocation + relayCode stored in lobby + StartHost()
+```
+- `CreateQuickMatchLobby()` (line 189) already sets `mode=quickmatch` as **Public** visibility → the lobby is now returned by `QueryLobbies` and matched by the loop (Fix 1). Dead code becomes live.
+- `CreateRelay()` (line 316) already stores `relayCode` in lobby data and calls `StartHost()`. Clients then read `relayCode` in `JoinRelay()`.
+- Keep the shared `UpdatePlayerAsync(name/avatar)` after the branch; keep the **join** branch unchanged (`JoinLobbyByIdAsync`, `isHost = false`).
 
-### 5) Add `OnLobbyUpdated` event + fire it
-- Declare `public System.Action OnLobbyUpdated;`
-- At end of successful `RefreshLobby()`: `OnLobbyUpdated?.Invoke();`
+This makes P1 create a real, discoverable, relay-backed host lobby.
 
-### 6) Heartbeat (runtime: lobby not deleted after ~30s)
-In the `Update()` poll block, host pings every poll (failures ignored):
+## Fix 3 — Lobby heartbeat (host) in `Update`
+Without it Unity deletes the lobby ~30s after creation, so joiners never find it. In the poll block (`if (pollTimer >= pollInterval)`), host pings (failures ignored):
 ```csharp
 if (isHost && currentLobby != null)
 {
@@ -96,39 +72,33 @@ if (isHost && currentLobby != null)
 }
 ```
 
-### 7) Fix spurious self-join
-Add a `private bool firstRefresh;` and in `RefreshLobby()`, on first successful fetch set `oldCount = newCount` before the comparison (so host's own presence doesn't fire a fake `OnPlayerJoined`).
-
-No change to: `CreateRelay`, `JoinRelay`, `CheckMatchReady`, `StartHostFlow` (`InitializeAndDeal` — valid now since host is running), `StartClientFlow`→`JoinRelay` (relayCode exists), `LeaveLobbyAndCleanup`, `Cancel`.
+## Fix 4 — Avoid spurious self-join on first refresh
+`previousPlayerCount` starts at 0, so the host's own presence fires a fake `OnPlayerJoined`. Add `private bool firstRefresh;` and in `RefreshLobby()`, on the first successful fetch set `oldCount = newCount` before the comparison.
 
 ---
 
-## Fix — `Assets/Scripts/MatchmakingUIController.cs` (View layer)
-- Subscribe/unsubscribe `QuickMatchService.Instance.OnLobbyUpdated += RenderSlots` in `OnEnable`/`OnDisable` (plus existing events).
-- `RenderSlots()` already written — now compiles. Add status text update inside it:
-  ```csharp
-  if (statusText != null)
-      statusText.text = players.Count + "/" + playerSlots.Length + " players found";
-  ```
-- `HandlePlayerJoined` / `HandlePlayerLeft` → call `RenderSlots()`.
-- `HandleMatchFound()` → `StopSearching()` (hide panel). Game-scene activation stays handled by the existing `NetworkGameManager.OnGameStartedChanged → HideAllLobbyPanels → ActivateGameScene` path (already hides `LobbyManager.matchmakingPanel`).
-- `HandleTimeout` / `OnCancelClicked` unchanged (offline fallback).
+## Why this makes Play Online work (full flow)
+1. **P1** → `FindMatch` → search finds nothing → creates public `mode=quickmatch` lobby → `CreateRelay` stores relayCode + `StartHost()` → heartbeat keeps it alive. Slot 0 = local player.
+2. **P2–P4** → search now **finds** P1's lobby (it has `mode` data + free slots, no NRE) → join → `UpdatePlayerAsync(name/avatar)`. `RefreshLobby` re-renders slots via `OnLobbyUpdated`.
+3. **At 4** → `CheckMatchReady` → host `StartHostFlow` → `InitializeAndDeal()` (valid: host running) deals; `isGameStarted` fires → all clients enter gameplay via the **existing unchanged** `NetworkGameManager.OnGameStartedChanged → HideAllLobbyPanels → ActivateGameScene` path.
+4. **Timeout <4** → `LeaveLobbyAndCleanup` → offline fallback (unchanged).
 
----
+## Files changed
+- `Assets/Scripts/QuickMatchService.cs` only:
+  - Fix 1: null-safe `result`/`lobby.Data` in search loop.
+  - Fix 2: create branch → `CreateQuickMatchLobby()` + `CreateRelay()`.
+  - Fix 3: host heartbeat in poll.
+  - Fix 4: `firstRefresh` guard.
 
-## No change to (verified safe)
-- **Offline**: `MenuController.PlayOffline → GameManager.SetupGame` — not on QuickMatch path.
-- **Friends**: `LobbyManager` code rooms (`CreateLobby`/`JoinLobby`) — QuickMatch found only via `mode=quickmatch` filter; no collision.
-- **Gameplay**: `NetworkGameManager`, `GameManager`, `NetworkPlayer`, `NetworkDeckManager` — reused unchanged.
-
-Files changed: `QuickMatchService.cs`, `MatchmakingUIController.cs`.
-
----
+## NOT touched (verified safe)
+- **Offline** (`MenuController.PlayOffline → GameManager.SetupGame`) — different path.
+- **Friends** (`LobbyManager` code rooms) — Quick Match matches only `mode=quickmatch` lobbies; Friends use `LobbyCode`. No collision.
+- **Gameplay** — `NetworkGameManager`, `GameManager`, `NetworkPlayer`, `NetworkDeckManager` reused unchanged.
+- `MatchmakingUIController.cs` — already correct (compiles, renders via DTO + `OnLobbyUpdated`).
 
 ## Verification
-- 0 compile errors (typed `AvatarDatabase` + `GetLobbyPlayers()` resolve all 3).
-- P1 → Play Online → creates discoverable `mode=quickmatch` lobby + relay + starts host; slot 0 = local name/avatar.
-- P2–P4 → Play Online → join same lobby; slots 1–3 fill with real names/avatars; lobby stays alive (heartbeat).
-- At 4 → host `InitializeAndDeal()` deals; `isGameStarted` fires → all clients enter online gameplay (unchanged path).
-- Timeout <4 → lobby left → offline mode selection (unchanged).
-- Offline + Friends behave exactly as before.
+- Clicking Play Online **no longer throws NRE** (null-safe loop).
+- P1 creates a discoverable `mode=quickmatch` lobby + relay + host; lobby stays alive via heartbeat.
+- P2–P4 find & join it; slots fill with real names/avatars.
+- At 4 players the game deals and all clients enter online gameplay (unchanged path).
+- Offline and Friends flows behave exactly as before.

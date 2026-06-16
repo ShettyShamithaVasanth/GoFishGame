@@ -45,6 +45,20 @@ public class QuickMatchService : MonoBehaviour
         {
             pollTimer = 0f;
 
+            if (isHost && currentLobby != null)
+            {
+                try
+                {
+                    _ = LobbyService.Instance
+                        .SendHeartbeatPingAsync(
+                            currentLobby.Id
+                        );
+                }
+                catch
+                {
+                }
+            }
+
             _ = RefreshLobby();
         }
 
@@ -71,7 +85,7 @@ public class QuickMatchService : MonoBehaviour
         isSearching = true;
 
         searchTimer = 0f;
-
+        firstRefresh = true;
         await FindOrCreateLobby();
     }
 
@@ -88,30 +102,29 @@ public class QuickMatchService : MonoBehaviour
 
             Lobby foundLobby = null;
 
-            foreach (Lobby lobby in result.Results)
+            if (result != null && result.Results != null)
             {
-                if (lobby == null)
-                    continue;
+                foreach (Lobby lobby in result.Results)
+                {
+                    if (lobby == null)
+                        continue;
 
-                // Skip if mode data doesn't exist
-                if (!lobby.Data.ContainsKey(LOBBY_MODE_KEY))
-                    continue;
+                    if (lobby.Data == null)
+                        continue;
 
-                string mode =
-                    lobby.Data[LOBBY_MODE_KEY].Value;
+                    if (!lobby.Data.ContainsKey(LOBBY_MODE_KEY))
+                        continue;
 
-                // Only allow quick match lobbies
-                if (mode != QUICKMATCH_MODE)
-                    continue;
+                    if (lobby.Data[LOBBY_MODE_KEY].Value != QUICKMATCH_MODE)
+                        continue;
 
-                // Must have free space
-                if (lobby.AvailableSlots <= 0)
-                    continue;
+                    if (lobby.AvailableSlots <= 0)
+                        continue;
 
-                foundLobby = lobby;
-                break;
+                    foundLobby = lobby;
+                    break;
+                }
             }
-
             if (foundLobby != null)
             {
                 Debug.Log(
@@ -135,14 +148,11 @@ public class QuickMatchService : MonoBehaviour
                 Debug.Log(
                     "No quick match lobby found. Creating new lobby..."
                 );
-
-                currentLobby =
-                    await LobbyService.Instance.CreateLobbyAsync(
-                        "QuickMatch",
-                        requiredPlayers
-                    );
+                await CreateQuickMatchLobby();
 
                 isHost = true;
+
+                await CreateRelay();
 
                 Debug.Log(
                     "Created lobby: " +
@@ -232,6 +242,7 @@ public class QuickMatchService : MonoBehaviour
     [Header("Runtime")]
     private Lobby currentLobby;
     private int previousPlayerCount = 0;
+    private bool firstRefresh;
     private bool isSearching;
     private float searchTimer;
     private float pollTimer;
@@ -394,7 +405,11 @@ public class QuickMatchService : MonoBehaviour
                     currentLobby.Id
                 );
             int newCount = currentLobby.Players.Count;
-
+            if (firstRefresh)
+            {
+                oldCount = newCount;
+                firstRefresh = false;
+            }
             if (newCount > oldCount)
             {
                 OnPlayerJoined?.Invoke(
