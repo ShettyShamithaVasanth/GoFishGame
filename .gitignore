@@ -24,6 +24,7 @@ AndroidBuilds/
 Anroidbuilds/
 *_BackUpThisFolder_ButDontShipItWithYourGame/
 
+GoFishGame_BurstDebugInformation_DoNotShip/
 
 # Build files
 *.apk
