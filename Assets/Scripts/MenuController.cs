@@ -23,12 +23,14 @@ public class MenuController : MonoBehaviour
     public GameObject DeckPosition;
     public GameObject FriendsPanel;
     public GameObject GameRulesPanel;
+    public GameObject EnteringGamePanel;
     public TMP_InputField roomCodeInput;
     [SerializeField] private MenuAnimationController menuAnimationController;
 
     void Start()
     {
         ModeSelectionPanel.SetActive(false); // ⭐ hide initially
+        EnteringGamePanel.SetActive(false);
         if (MenuBackground != null)
         {
             MenuBackground.SetActive(true);
@@ -77,7 +79,16 @@ public class MenuController : MonoBehaviour
         Debug.Log("play Online mode.");
         // set mode
         GameModeManager.isOnlineMode = true;
-        // load matchmaking scene
+        StartCoroutine(PlayOnlineRoutine());
+    }
+
+    private IEnumerator PlayOnlineRoutine()
+    {
+        MenuUI.SetActive(false);
+        EnteringGamePanel?.SetActive(true);
+
+        yield return new WaitForSeconds(2.5f);
+
         SceneManager.LoadScene("GameScene");
     }
 

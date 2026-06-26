@@ -304,22 +304,22 @@ public class QuickMatchService : MonoBehaviour
             }
 
             list.Add(
-                new LobbyPlayerInfo
-                {
-                    PlayerName = playerName,
-                    AvatarIndex = avatarIndex,
-                    IsLocal = isLocal
-                }
-            );
+    new LobbyPlayerInfo
+    {
+        PlayerName = playerName,
+        AvatarIndex = avatarIndex,
+        IsLocal = isLocal
+    }
+);
         }
 
         list.Sort((a, b) =>
-        {
-            if (a.IsLocal == b.IsLocal)
-                return 0;
+{
+    if (a.IsLocal == b.IsLocal)
+        return 0;
 
-            return a.IsLocal ? -1 : 1;
-        });
+    return a.IsLocal ? -1 : 1;
+});
 
         return list;
     }
