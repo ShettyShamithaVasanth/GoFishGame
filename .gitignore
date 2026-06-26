@@ -46,7 +46,6 @@ Anroidbuilds/
 *.VC.db
 *.opendb
 *.iscache
-*.Iscache
 
 # Temp
 *.tmp
