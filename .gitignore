@@ -36,16 +36,16 @@ Anroidbuilds/
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.user
 *.userprefs
 *.pidb
 *.booproj
 *.svd
 *.pdb
-*.opendb
 *.VC.db
+*.opendb
 *.iscache
-
 
 # Temp
 *.tmp
