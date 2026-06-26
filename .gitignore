@@ -1,10 +1,38 @@
+# Unity generated folders
 [Ll]ibrary/
 [Tt]emp/
+[Oo]bj/
 [Bb]uild/
 [Bb]uilds/
 [Ll]ogs/
 UserSettings/
+MemoryCaptures/
+Recordings/
 
+# IDE
+.vs/
+.vscode/
+.idea/
+.kilo/
+
+
+# Temporary folders
+.utmp/
+
+# Build folders
+AndroidBuilds/
+Anroidbuilds/
+*_BackUpThisFolder_ButDontShipItWithYourGame/
+
+
+# Build files
+*.apk
+*.aab
+*.exe
+*.app
+
+
+# Unity generated files
 *.csproj
 *.unityproj
 *.sln
@@ -14,5 +42,20 @@ UserSettings/
 *.booproj
 *.svd
 *.pdb
+*.opendb
+*.VC.db
+*.iscache
 
+
+# Temp
+*.tmp
+*.bak
+*.cache
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+
+# macOS
 .DS_Store
