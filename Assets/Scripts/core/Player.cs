@@ -14,6 +14,7 @@ public class Player
 
     public bool IsMyTurn { get; private set; }
     public object Data { get; internal set; }
+    public string Id { get; internal set; }
 
     public Player(int id, string name, bool isHuman, int avatarIndex = 0)
     {
