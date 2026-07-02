@@ -16,3 +16,25 @@ UserSettings/
 *.pdb
 
 .DS_Store
+# Kilo AI plans
+.kilo/
+
+# Visual Studio cache
+*.lscache
+
+# Build outputs
+*.apk
+*.aab
+*.exe
+
+# Unity generated cache
+MemoryCaptures/
+
+# Rider / VS
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.cache
+*.log
