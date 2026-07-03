@@ -8,6 +8,7 @@ using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Collections;
 
 
 public class QuickMatchService : MonoBehaviour
@@ -346,7 +347,7 @@ public class QuickMatchService : MonoBehaviour
 
             return a.IsHost ? -1 : 1;
         });
-        Debug.Log("Updating Matchmaking UI : " +roster.Count +" players");
+        Debug.Log("Updating Matchmaking UI : " + roster.Count + " players");
         OnRosterChanged?.Invoke(roster);
 
         CheckMatchReady();
@@ -357,14 +358,13 @@ public class QuickMatchService : MonoBehaviour
     {
         if (currentLobby == null)
             return;
-
         if (currentLobby.Players.Count < minPlayersToStart)
             return;
-
-        Debug.Log("Required players found");
-
+        if (!isSearching)
+            return;
+        Debug.Log("Minimun players reached, starting game...");
+        isSearching = false;
         OnMatchFound?.Invoke();
-
         await StartOnlineGame();
     }
     private async System.Threading.Tasks.Task StartOnlineGame()
@@ -382,16 +382,72 @@ public class QuickMatchService : MonoBehaviour
     {
         Debug.Log("Starting Host Flow");
 
+        LobbyManager lobby = LobbyManager.Instance;
+
+        if (lobby != null && lobby.enteringGamePanel != null)
+        {
+            lobby.enteringGamePanel.SetActive(true);
+        }
+
+        if (NetworkGameManager.Instance == null)
+        {
+            Debug.LogError("NetworkGameManager Instance is NULL");
+
+            return Task.CompletedTask;
+        }
+
+        Debug.Log("Initializing Multiplayer Game...");
+
+        NetworkGameManager.Instance.InitializeAndDeal();
+
         return Task.CompletedTask;
     }
     private Task StartClientFlow()
     {
-        Debug.Log("Starting Client Flow");
+        Debug.Log("Client waiting for host to start the game");
         return Task.CompletedTask;
     }
-    private System.Collections.IEnumerator LeaveLobbyAndCleanup()
+    private IEnumerator LeaveLobbyAndCleanup()
     {
-        Debug.Log("Leaving matchmaking lobby");
+        Debug.Log("Cleaning Matchmaking...");
+
+        if (currentLobby != null)
+        {
+            Task task;
+
+            if (isHost)
+            {
+                Debug.Log("Deleting Lobby...");
+
+                task =
+                    LobbyService.Instance.DeleteLobbyAsync(
+                        currentLobby.Id
+                    );
+            }
+            else
+            {
+                Debug.Log("Leaving Lobby...");
+
+                task =
+                    LobbyService.Instance.RemovePlayerAsync(
+                        currentLobby.Id,
+                        AuthenticationService.Instance.PlayerId
+                    );
+            }
+
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+        }
+
+        if (NetworkManager.Singleton != null &&
+            NetworkManager.Singleton.IsListening)
+        {
+            Debug.Log("Shutting Down Network...");
+
+            NetworkManager.Singleton.Shutdown();
+        }
 
         currentLobby = null;
 
@@ -399,11 +455,15 @@ public class QuickMatchService : MonoBehaviour
 
         isHost = false;
 
+        isSearching = false;
+
         searchTimer = 0f;
 
-        yield return null;
-    }
+        pollTimer = 0f;
 
+        Debug.Log("Cleanup Complete");
+    }
+    
     public void Cancel()
     {
         isSearching = false;

@@ -63,8 +63,9 @@ public class MatchmakingUIController : MonoBehaviour
 
     IEnumerator HandleNoPlayersFound()
     {
-        timerText.text =
-            "No players found. Switching to offline...";
+        statusText.text = "Matchmaking timed out";
+
+        timerText.text = "Switching to Offline Mode...";
 
         yield return new WaitForSeconds(1.5f);
 
@@ -123,7 +124,7 @@ public class MatchmakingUIController : MonoBehaviour
             playerSlots[i].SetProfile(
                 roster[i].PlayerName,
                 avatar);
-            Debug.Log("Slot " +i +" -> " +roster[i].PlayerName);
+            Debug.Log("Slot " + i + " -> " + roster[i].PlayerName);
         }
         if (statusText != null)
         {
