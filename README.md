@@ -79,54 +79,6 @@ On top of that foundation sits real-time networking via **Unity Netcode for Game
 
 ---
 
-## 🏗️ Architecture
-
-### MVC Data Flow
-
-The **Model** never imports `UnityEngine`. The **View** never touches game rules. The **Controller** is the only thing allowed to talk to both — which means the entire ruleset is unit-testable outside of Unity, and the visuals can be reskinned without touching a single line of game logic.
-
-```mermaid
-graph TD
-    subgraph Model["🧮 Model — pure C#, no Unity dependency"]
-        Card[Card] --> Deck[Deck<br/>Fisher-Yates Shuffle]
-        Deck --> Hand[Hand<br/>O(1) Draw / Sort]
-    end
-
-    subgraph Controller["🎮 Controller — the only layer that talks to both sides"]
-        Input[Input Handler] --> RPC[Network RPC Layer]
-        RPC --> State[Game State Manager]
-    end
-
-    subgraph View["🖼️ View — Unity GameObjects & UI"]
-        Render[Card Renderer] --> UI[UI Manager]
-        UI --> Anim[Animation System]
-    end
-
-    State -->|reads / mutates| Model
-    State -->|raises events| View
-```
-
-### Network Topology — Client-Host
-
-The Host owns the single **Authoritative Model** — the real deck, the real hidden hands. Every remote client holds only a **Local Model**, which is a projection updated exclusively through explicit Server RPCs. A client can *ask*, but only the Host can *decide*.
-
-```mermaid
-graph LR
-    Host[("🖥️ Host<br/>Authoritative Model")]
-    C1["Client 1<br/>Local Model"]
-    C2["Client 2<br/>Local Model"]
-    C3["Client 3<br/>Local Model"]
-
-    Host -->|Server RPC: state update| C1
-    Host -->|Server RPC: state update| C2
-    Host -->|Server RPC: state update| C3
-    C1 -.->|Client RPC: request| Host
-    C2 -.->|Client RPC: request| Host
-    C3 -.->|Client RPC: request| Host
-```
-
----
-
 ## 🚀 Getting Started
 
 ### Prerequisites
